@@ -1,0 +1,19 @@
+{# templates/stats_table.html #}
+<table class="stat-table">
+    <thead>
+        <tr>
+            <th class="stat-value-home">{{ stats.columns[0] }}</th>
+            <th class="stat-label">Estadística</th>
+            <th class="stat-value-away">{{ stats.columns[1] }}</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for index, row in stats.iterrows() %}
+        <tr>
+            <td class="stat-value-home">{{ row['Casa'] | safe }}</td>
+            <td class="stat-label">{{ index.replace('Shots on Goal', 'Tiros a Puerta').replace('Shots', 'Tiros').replace('Dangerous Attacks', 'Ataques Peligrosos').replace('Attacks', 'Ataques') }}</td>
+            <td class="stat-value-away">{{ row['Fuera'] | safe }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>

@@ -1,0 +1,127 @@
+<!-- ANÁLISIS CONTRA RIVAL DEL RIVAL - Versión Gráfica -->
+<h3 class="section-header">🔄 Análisis Contra Rival del Rival</h3>
+<div class="row">
+    <!-- Análisis del Equipo Local contra el Rival del Equipo Visitante -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title-custom mb-0">
+                    <span class="home-color">{{ data.home_name }}</span> vs Rival de <span class="away-color">{{ data.away_name }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if data.analisis_contra_rival_del_rival and data.analisis_contra_rival_del_rival.matches_a_vs_rival_b_rival %}
+                    <div class="text-center mb-3">
+                        <span class="badge bg-info fs-6">
+                            Rival: {{ data.analisis_contra_rival_del_rival.rival_b_rival }}
+                        </span>
+                    </div>
+                    
+                    <!-- Partidos detallados -->
+                    <h6 class="border-bottom pb-2">Partidos Recientes:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Local</th>
+                                    <th>Resultado</th>
+                                    <th>Visitante</th>
+                                    <th>AH</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for match in data.analisis_contra_rival_del_rival.matches_a_vs_rival_b_rival %}
+                                <tr>
+                                    <td class="small">{{ match.date[:10] if match.date else 'N/A' }}</td>
+                                    <td class="small">
+                                        <span class="{% if match.home_team == data.home_name %}fw-bold{% endif %}">
+                                            {{ match.home_team[:12] }}{% if match.home_team|length > 12 %}...{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="score-value text-center">{{ match.score.replace('-', ':') }}</td>
+                                    <td class="small">
+                                        <span class="{% if match.away_team == data.home_name %}fw-bold{% endif %}">
+                                            {{ match.away_team[:12] }}{% if match.away_team|length > 12 %}...{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="ah-value text-center">{{ match.ah_line }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-info-circle text-muted me-2"></i>
+                        <span class="text-muted">
+                            No hay datos disponibles para {{ data.home_name }} contra {{ data.analisis_contra_rival_del_rival.rival_b_rival if data.analisis_contra_rival_del_rival else 'el rival' }}
+                        </span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Análisis del Equipo Visitante contra el Rival del Equipo Local -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title-custom mb-0">
+                    <span class="away-color">{{ data.away_name }}</span> vs Rival de <span class="home-color">{{ data.home_name }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if data.analisis_contra_rival_del_rival and data.analisis_contra_rival_del_rival.matches_b_vs_rival_a_rival %}
+                    <div class="text-center mb-3">
+                        <span class="badge bg-info fs-6">
+                            Rival: {{ data.analisis_contra_rival_del_rival.rival_a_rival }}
+                        </span>
+                    </div>
+                    
+                    <!-- Partidos detallados -->
+                    <h6 class="border-bottom pb-2">Partidos Recientes:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Local</th>
+                                    <th>Resultado</th>
+                                    <th>Visitante</th>
+                                    <th>AH</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for match in data.analisis_contra_rival_del_rival.matches_b_vs_rival_a_rival %}
+                                <tr>
+                                    <td class="small">{{ match.date[:10] if match.date else 'N/A' }}</td>
+                                    <td class="small">
+                                        <span class="{% if match.home_team == data.away_name %}fw-bold{% endif %}">
+                                            {{ match.home_team[:12] }}{% if match.home_team|length > 12 %}...{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="score-value text-center">{{ match.score.replace('-', ':') }}</td>
+                                    <td class="small">
+                                        <span class="{% if match.away_team == data.away_name %}fw-bold{% endif %}">
+                                            {{ match.away_team[:12] }}{% if match.away_team|length > 12 %}...{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="ah-value text-center">{{ match.ah_line }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-info-circle text-muted me-2"></i>
+                        <span class="text-muted">
+                            No hay datos disponibles para {{ data.away_name }} contra {{ data.analisis_contra_rival_del_rival.rival_a_rival if data.analisis_contra_rival_del_rival else 'el rival' }}
+                        </span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

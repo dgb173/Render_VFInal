@@ -1,0 +1,127 @@
+<!-- ANÁLISIS H2H DIRECTO - Versión Gráfica -->
+<h3 class="section-header">⚔️ Análisis H2H Directo</h3>
+<div class="row">
+    <!-- Enfrentamientos Directos en Este Estadio -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title-custom mb-0">🏟️ Enfrentamientos en Este Estadio</h5>
+            </div>
+            <div class="card-body">
+                {% if data.h2h_stadium.details.res1 != '?:?' %}
+                    {% set res = data.h2h_stadium.details %}
+                    
+                    <!-- Resultado principal -->
+                    <div class="text-center mb-3 p-3 bg-light rounded">
+                        <div class="d-flex justify-content-center align-items-center">
+                            <span class="home-color fw-bold">{{ data.home_name[:15] }}{% if data.home_name|length > 15 %}...{% endif %}</span>
+                            <span class="score-value mx-3 fs-3">{{ res.res1.replace(':', ' : ') }}</span>
+                            <span class="away-color fw-bold">{{ data.away_name[:15] }}{% if data.away_name|length > 15 %}...{% endif %}</span>
+                        </div>
+                        <div class="mt-2">
+                            <span class="badge bg-info">Handicap: {{ res.ah1 }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Partidos históricos en este estadio -->
+                    <h6 class="border-bottom pb-2">Historial en este Estadio:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Resultado</th>
+                                    <th>AH</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if data.h2h_stadium.details.matches_historicos %}
+                                    {% for match in data.h2h_stadium.details.matches_historicos[:5] %}
+                                    <tr>
+                                        <td class="small">{{ match.date[:10] if match.date else 'N/A' }}</td>
+                                        <td class="score-value text-center">{{ match.score.replace('-', ':') if match.score else 'N/A' }}</td>
+                                        <td class="ah-value text-center">{{ match.ahLine if match.ahLine else 'N/A' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No hay datos históricos disponibles</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-info-circle text-muted me-2"></i>
+                        <span class="text-muted">
+                            No hay datos de H2H en este estadio
+                        </span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Enfrentamientos Directos Generales -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title-custom mb-0">🌍 Enfrentamientos Generales</h5>
+            </div>
+            <div class="card-body">
+                {% if data.h2h_general.details.res6 != '?:?' %}
+                    {% set res = data.h2h_general.details %}
+                    
+                    <!-- Resultado principal -->
+                    <div class="text-center mb-3 p-3 bg-light rounded">
+                        <div class="d-flex justify-content-center align-items-center">
+                            <span class="home-color fw-bold">{{ res.h2h_gen_home[:15] }}{% if res.h2h_gen_home|length > 15 %}...{% endif %}</span>
+                            <span class="score-value mx-3 fs-3">{{ res.res6.replace(':', ' : ') }}</span>
+                            <span class="away-color fw-bold">{{ res.h2h_gen_away[:15] }}{% if res.h2h_gen_away|length > 15 %}...{% endif %}</span>
+                        </div>
+                        <div class="mt-2">
+                            <span class="badge bg-info">Handicap: {{ res.ah6 }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Partidos históricos generales -->
+                    <h6 class="border-bottom pb-2">Historial General:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Resultado</th>
+                                    <th>AH</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if data.h2h_general.details.matches_historicos_generales %}
+                                    {% for match in data.h2h_general.details.matches_historicos_generales[:5] %}
+                                    <tr>
+                                        <td class="small">{{ match.date[:10] if match.date else 'N/A' }}</td>
+                                        <td class="score-value text-center">{{ match.score.replace('-', ':') if match.score else 'N/A' }}</td>
+                                        <td class="ah-value text-center">{{ match.ahLine if match.ahLine else 'N/A' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No hay datos históricos disponibles</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-info-circle text-muted me-2"></i>
+                        <span class="text-muted">
+                            No hay datos de H2H generales
+                        </span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

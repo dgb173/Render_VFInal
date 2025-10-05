@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test loadPreviewAnalysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { margin-top: 20px; }
+        .preview-container {
+            background-color: #e9ecef;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+        .preview-loading {
+            text-align: center;
+            font-style: italic;
+            color: #6c757d;
+        }
+        .ah-value { font-weight: bold; color: #6f42c1; }
+        .home-color { color: #007bff; font-weight: bold; }
+        .away-color { color: #fd7e14; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Test loadPreviewAnalysis</h1>
+        
+        <div class="card mb-3">
+            <div class="card-body">
+                <button id="test-btn" class="btn btn-primary">Probar loadPreviewAnalysis</button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered text-center">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Partido</th>
+                        <th>Hándicap</th>
+                        <th>Línea de Goles</th>
+                        <th>Análisis Avanzado</th>
+                        <th>Vista Previa Rápida</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="align-middle">15:00</td>
+                        <td class="align-middle text-start">
+                            <span class="team-name">Equipo Local</span>
+                            <small>vs</small>
+                            <span class="team-name">Equipo Visitante</span>
+                        </td>
+                        <td class="align-middle">
+                            <span class="badge bg-info text-dark">-0.25</span>
+                        </td>
+                        <td class="align-middle">
+                            <span class="badge bg-success">2.5</span>
+                        </td>
+                        <td class="align-middle">
+                            <a href="#" class="study-link" title="Abrir estudio del partido"><i class="fa-solid fa-chart-simple"></i></a>
+                        </td>
+                        <td class="align-middle">
+                            <span class="preview-btn" data-match-id="123456" title="Ver vista previa rápida"><i class="fa-solid fa-eye"></i></span>
+                        </td>
+                    </tr>
+                    <tr id="preview-row-123456" style="display: none;">
+                        <td colspan="6" class="preview-container" id="preview-container-123456">
+                            <div class="preview-loading">Buscando analisis detallado...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Función para cargar la VISTA PREVIA RÁPIDA (bajo demanda)
+        function loadPreviewAnalysis(matchId) {
+            const previewContainer = document.getElementById(`preview-container-${matchId}`);
+            const previewRow = document.getElementById(`preview-row-${matchId}`);
+            previewRow.style.display = '';
+            previewContainer.innerHTML = '<div class="preview-loading">Cargando vista previa...</div>';
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s para vista previa
+
+            fetch(`/api/preview/${matchId}`, { signal: controller.signal })
+                .then(response => {
+                    console.log("Response status:", response.status);
+                    console.log("Response headers:", response.headers);
+                    return response.json();
+                })
+                .then(data => {
+                    clearTimeout(timeoutId);
+                    console.log("Data received:", data);
+                    if (data.error) {
+                        previewContainer.innerHTML = `<div class="preview-loading">Error: ${data.error}</div>`;
+                        return;
+                    }
+                    previewContainer.setAttribute('data-loaded', 'true');
+
+                    const getCoverClass = (status) => {
+                        if (status === 'CUBIERTO') return 'text-success fw-bold';
+                        if (status === 'NO CUBIERTO') return 'text-danger fw-bold';
+                        return 'text-muted';
+                    };
+
+                    let html = `<h6><i class="fa-solid fa-bolt"></i> Vista Previa Rápida: ${data.home_team} vs ${data.away_team}</h6>`;
+                    html += `<p class="mb-1"><strong>Línea AH:</strong> <span class="ah-value">${data.handicap.ah_line}</span> | <strong>Favorito:</strong> ${data.handicap.favorite || 'Ninguno'}</p>`;
+                    
+                    html += '<div class="row mt-2">';
+                    html += `<div class="col-6"><strong>Rendimiento Reciente (Local):</strong><br>${data.recent_form.home.wins} victorias en ${data.recent_form.home.total} partidos.</div>`;
+                    html += `<div class="col-6"><strong>Rendimiento Reciente (Visitante):</strong><br>${data.recent_form.away.wins} victorias en ${data.recent_form.away.total} partidos.</div>`;
+                    html += '</div>';
+
+                    html += '<div class="row mt-2">';
+                    html += `<div class="col-12"><strong>H2H (Últ. 8):</strong> Local: ${data.h2h_stats.home_wins} | Visitante: ${data.h2h_stats.away_wins} | Empates: ${data.h2h_stats.draws}</div>`;
+                    html += `<div class="col-12"><strong>Cobertura AH en último H2H:</strong> <span class="${getCoverClass(data.handicap.cover_on_last_h2h)}">${data.handicap.cover_on_last_h2h}</span></div>`;
+                    html += '</div>';
+
+                    previewContainer.innerHTML = html;
+                })
+                .catch(error => {
+                    clearTimeout(timeoutId);
+                    console.error('Error:', error);
+                    if (error.name === 'AbortError') {
+                        previewContainer.innerHTML = '<div class="preview-loading">Error: Tiempo de espera agotado.</div>';
+                    } else {
+                        previewContainer.innerHTML = '<div class="preview-loading">Error al cargar la vista previa.</div>';
+                    }
+                });
+        }
+
+        // Manejar el clic en el botón de prueba
+        document.getElementById('test-btn').addEventListener('click', function() {
+            loadPreviewAnalysis('123456');
+        });
+
+        // Manejar el clic en los botones de vista previa
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.preview-btn');
+            if (btn) {
+                const matchId = btn.getAttribute('data-match-id');
+                const previewRow = document.getElementById(`preview-row-${matchId}`);
+                const previewContainer = document.getElementById(`preview-container-${matchId}`);
+                
+                if (previewRow.style.display === '') {
+                    previewRow.style.display = 'none';
+                } else {
+                    if (previewContainer.getAttribute('data-loaded') === 'true') {
+                        previewRow.style.display = '';
+                        return;
+                    }
+                    loadPreviewAnalysis(matchId);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

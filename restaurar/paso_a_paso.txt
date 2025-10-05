@@ -1,0 +1,49 @@
+Título: Guía de Restauración y Lógica de Funcionalidades Implementadas
+
+Este documento describe los cambios realizados para implementar la sección de "Analizar Resultados" y para corregir la funcionalidad de "vista rápida" (el ojo).
+
+---
+### Fichero: app.py
+---
+
+Se han realizado los siguientes cambios:
+
+1.  **Import de `threading`**: Se añadió `import threading` al principio del archivo para poder ejecutar tareas en segundo plano.
+
+2.  **Nuevas Funciones de Scraping para Partidos Finalizados**:
+    *   Se creó `parse_main_page_finished_matches`: Una copia de `parse_main_page_matches` pero que filtra partidos cuya fecha es *anterior* a la actual.
+    *   Se creó `get_main_page_finished_matches_async`: El wrapper asíncrono para la función anterior.
+
+3.  **Nuevas Rutas (Endpoints)**:
+    *   Se añadió la ruta `@app.route('/resultados')`: Es la página principal para la nueva sección. Llama a las funciones de partidos finalizados y renderiza `index.html` con la variable `page_mode='finished'`.
+    *   Se añadió la ruta `@app.route('/api/finished_matches')`: Es la API que usa el botón "Cargar más" en la página de resultados.
+    *   Se modificó la ruta `@app.route('/')` (la principal) para que también pase la variable `page_mode='upcoming'` a la plantilla.
+
+4.  **Modificación de la API de Análisis**:
+    *   En la ruta `@app.route('/api/analisis/<string:match_id>')`, se añadió el campo `'final_score': datos.get('score')` al diccionario `payload` que se devuelve como JSON. Esto es crucial para que la vista previa pueda mostrar el resultado.
+
+---
+### Fichero: templates/index.html
+---
+
+Este archivo ahora funciona como una plantilla dinámica para ambas secciones.
+
+1.  **Botones de Navegación**: Se añadieron dos botones grandes en la parte superior ("Ver Próximos Partidos" y "Analizar Resultados") que permiten cambiar entre las dos vistas. El botón de la vista activa se resalta.
+
+2.  **Título Dinámico**: El `<h1>` ahora muestra el contenido de la variable `{{ page_title }}`, que es enviada desde `app.py`.
+
+3.  **Tabla Dinámica**:
+    *   La cabecera de la tabla (`<thead>`) ahora incluye una condición `{% if page_mode == 'finished' %}` para mostrar la columna "Resultado" solo en esa vista.
+    *   El cuerpo de la tabla (`<tbody>`) también usa la misma condición para añadir la celda del marcador (`<td>`) en cada fila de partido finalizado.
+    *   El `colspan` de la fila de vista previa también es dinámico (`{% if page_mode == 'finished' %}7{% else %}6{% endif %}`) para ajustarse al número de columnas.
+
+4.  **Lógica JavaScript Actualizada (el bloque `<script>`)**:
+    *   **Variable Global `PAGE_MODE`**: Se añadió `const PAGE_MODE = '{{ page_mode }}';` para que el JavaScript sepa en qué página se encuentra.
+    *   **Función `loadMoreMatches`**: Ahora comprueba el valor de `PAGE_MODE` para construir la URL de la API correcta (`/api/matches` o `/api/finished_matches`) y para añadir la celda del marcador si es necesario.
+    *   **Función `loadDeepAnalysis` (el "ojito")**: Esta es la función que se rompió y se corrigió. Se restauró todo el código que genera las tarjetas de análisis. Además, ahora comprueba `PAGE_MODE` y, si es `'finished'`, añade un `<h4>` con el resultado final (`data.final_score`) al principio del HTML de la vista previa.
+
+---
+### Resumen de la Corrección del "Ojito"
+---
+
+El error se produjo porque al modificar el JavaScript, se borró por accidente el código que generaba el HTML de las tarjetas de análisis dentro de la función `loadDeepAnalysis`. La solución fue reescribir el fichero `index.html` entero, asegurando que el bloque `<script>` contuviera la lógica completa y correcta, incluyendo tanto el código original de renderizado como las nuevas adiciones para el marcador final y el `PAGE_MODE`.

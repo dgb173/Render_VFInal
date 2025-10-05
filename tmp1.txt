@@ -1,0 +1,250 @@
+# app.py - Servidor web principal (Flask)
+from flask import Flask, render_template, abort, request
+import asyncio
+from playwright.async_api import async_playwright
+from bs4 import BeautifulSoup
+import datetime
+import re
+import math
+
+# ¡Importante! Importa tu nuevo módulo de scraping
+from modules.estudio_scraper import obtener_datos_completos_partido, format_ah_as_decimal_string_of, obtener_datos_preview_rapido, obtener_datos_preview_ligero
+from flask import jsonify # Asegúrate de que jsonify está importado
+
+app = Flask(__name__)
+
+# --- Mantén tu lógica para la página principal ---
+URL_NOWGOAL = "https://live20.nowgoal25.com/"
+
+def _parse_number_clean(s: str):
+    if s is None:
+        return None
+    txt = str(s).strip()
+    txt = txt.replace('\u2212', '-')  # unicode minus
+    txt = txt.replace(',', '.')
+    txt = txt.replace('+', '')
+    txt = txt.replace(' ', '')
+    m = re.search(r"^[+-]?\d+(?:\.\d+)?$", txt)
+    if m:
+        try:
+            return float(m.group(0))
+        except ValueError:
+            return None
+    return None
+
+def _parse_number(s: str):
+    if s is None:
+        return None
+    # Normaliza separadores y signos
+    txt = str(s).strip()
+    txt = txt.replace('\u2212', '-')  # minus unicode
+    txt = txt.replace(',', '.')
+    txt = txt.replace(' ', '')
+    # Coincide con un número decimal con signo
+    m = re.search(r"^[+-]?\d+(?:\.\d+)?$", txt)
+    if m:
+        try:
+            return float(m.group(0))
+        except ValueError:
+            return None
+    return None
+
+def _parse_handicap_to_float(text: str):
+    if text is None:
+        return None
+    t = str(text).strip()
+    if '/' in t:
+        parts = [p for p in re.split(r"/", t) if p]
+        nums = []
+        for p in parts:
+            v = _parse_number_clean(p)
+            if v is None:
+                return None
+            nums.append(v)
+        if not nums:
+            return None
+        return sum(nums) / len(nums)
+    # Si viene como cadena normal (ej. "+0.25" o "-0,75")
+    return _parse_number_clean(t.replace('+', ''))
+
+def _bucket_to_half(value: float) -> float:
+    if value is None:
+        return None
+    if value == 0:
+        return 0.0
+    sign = -1.0 if value < 0 else 1.0
+    av = abs(value)
+    base = math.floor(av + 1e-9)
+    frac = av - base
+    # Mapea 0.25/0.75/0.5 a .5, 0.0 queda .0
+    def close(a, b):
+        return abs(a - b) < 1e-6
+    if close(frac, 0.0):
+        bucket = float(base)
+    elif close(frac, 0.5) or close(frac, 0.25) or close(frac, 0.75):
+        bucket = base + 0.5
+    else:
+        # fallback: redondeo al múltiplo de 0.5 más cercano
+        bucket = round(av * 2) / 2.0
+        # si cae justo en entero, desplazar a .5 para respetar la preferencia de .25/.75 → .5
+        f = bucket - math.floor(bucket)
+        if close(f, 0.0) and (abs(av - (math.floor(bucket) + 0.25)) < 0.26 or abs(av - (math.floor(bucket) + 0.75)) < 0.26):
+            bucket = math.floor(bucket) + 0.5
+    return sign * bucket
+
+def normalize_handicap_to_half_bucket_str(text: str):
+    v = _parse_handicap_to_float(text)
+    if v is None:
+        return None
+    b = _bucket_to_half(v)
+    if b is None:
+        return None
+    # Formato con un decimal
+    return f"{b:.1f}"
+
+
+def parse_main_page_matches(html_content, limit=20, offset=0, handicap_filter=None):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    match_rows = soup.find_all('tr', id=lambda x: x and x.startswith('tr1_'))
+    upcoming_matches = []
+    now_utc = datetime.datetime.utcnow()
+
+    for row in match_rows:
+        match_id = row.get('id', '').replace('tr1_', '')
+        if not match_id: continue
+
+        time_cell = row.find('td', {'name': 'timeData'})
+        if not time_cell or not time_cell.has_attr('data-t'): continue
+        
+        try:
+            match_time = datetime.datetime.strptime(time_cell['data-t'], '%Y-%m-%d %H:%M:%S')
+        except (ValueError, IndexError):
+            continue
+
+        if match_time < now_utc: continue
+
+        home_team_tag = row.find('a', {'id': f'team1_{match_id}'})
+        away_team_tag = row.find('a', {'id': f'team2_{match_id}'})
+        odds_data = row.get('odds', '').split(',')
+        handicap = odds_data[2] if len(odds_data) > 2 else "N/A"
+        goal_line = odds_data[10] if len(odds_data) > 10 else "N/A"
+
+        # Filtro robusto: Ignorar si no hay datos de handicap o goles
+        if not handicap or handicap == "N/A" or not goal_line or goal_line == "N/A":
+            continue
+
+        upcoming_matches.append({
+            "id": match_id,
+            "time": match_time.strftime('%Y-%m-%d %H:%M'),
+            "home_team": home_team_tag.text.strip() if home_team_tag else "N/A",
+            "away_team": away_team_tag.text.strip() if away_team_tag else "N/A",
+            "handicap": handicap,
+            "goal_line": goal_line
+        })
+
+    # Aplicar filtro por hándicap mapeando a pasos de 0.5
+    if handicap_filter:
+        try:
+            target = normalize_handicap_to_half_bucket_str(handicap_filter)
+            if target is not None:
+                filtered = []
+                for m in upcoming_matches:
+                    hv = normalize_handicap_to_half_bucket_str(m.get('handicap', ''))
+                    if hv == target:
+                        filtered.append(m)
+                upcoming_matches = filtered
+        except Exception:
+            pass
+
+    upcoming_matches.sort(key=lambda x: x['time'])
+    return upcoming_matches[offset:offset+limit]
+
+async def get_main_page_matches_async(limit=20, offset=0, handicap_filter=None):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        try:
+            await page.goto(URL_NOWGOAL, wait_until="domcontentloaded", timeout=20000)
+            await page.wait_for_timeout(5000)
+            html_content = await page.content()
+            return parse_main_page_matches(html_content, limit, offset, handicap_filter)
+        finally:
+            await browser.close()
+
+@app.route('/')
+def index():
+    try:
+        print("Recibida petición. Ejecutando scraper de partidos...")
+        hf = request.args.get('handicap')
+        matches = asyncio.run(get_main_page_matches_async(handicap_filter=hf))
+        print(f"Scraper finalizado. {len(matches)} partidos encontrados.")
+        opts = sorted({
+            normalize_handicap_to_half_bucket_str(m.get('handicap'))
+            for m in matches if normalize_handicap_to_half_bucket_str(m.get('handicap')) is not None
+        }, key=lambda x: float(x))
+        return render_template('index.html', matches=matches, handicap_filter=hf, handicap_options=opts)
+    except Exception as e:
+        print(f"ERROR en la ruta principal: {e}")
+        return render_template('index.html', matches=[], error=f"No se pudieron cargar los partidos: {e}")
+
+@app.route('/api/matches')
+def api_matches():
+    try:
+        offset = int(request.args.get('offset', 0))
+        limit = int(request.args.get('limit', 5))
+        matches = asyncio.run(get_main_page_matches_async(limit, offset, request.args.get('handicap')))
+        return {'matches': matches}
+    except Exception as e:
+        return {'error': str(e)}, 500
+
+@app.route('/proximos')
+def proximos():
+    try:
+        print("Recibida petición. Ejecutando scraper de partidos...")
+        hf = request.args.get('handicap')
+        matches = asyncio.run(get_main_page_matches_async(25, 0, hf))
+        print(f"Scraper finalizado. {len(matches)} partidos encontrados.")
+        opts = sorted({
+            normalize_handicap_to_half_bucket_str(m.get('handicap'))
+            for m in matches if normalize_handicap_to_half_bucket_str(m.get('handicap')) is not None
+        }, key=lambda x: float(x))
+        return render_template('index.html', matches=matches, handicap_filter=hf, handicap_options=opts)
+    except Exception as e:
+        print(f"ERROR en la ruta principal: {e}")
+        return render_template('index.html', matches=[], error=f"No se pudieron cargar los partidos: {e}")
+
+# --- NUEVA RUTA PARA MOSTRAR EL ESTUDIO DETALLADO ---
+@app.route('/estudio/<string:match_id>')
+def mostrar_estudio(match_id):
+    """
+    Esta ruta se activa cuando un usuario visita /estudio/ID_DEL_PARTIDO.
+    """
+    print(f"Recibida petición para el estudio del partido ID: {match_id}")
+    
+    # Llama a la función principal de tu módulo de scraping
+    datos_partido = obtener_datos_completos_partido(match_id)
+    
+    if not datos_partido or "error" in datos_partido:
+        # Si hay un error, puedes mostrar una página de error
+        print(f"Error al obtener datos para {match_id}: {datos_partido.get('error')}")
+        abort(500, description=datos_partido.get('error', 'Error desconocido'))
+
+    # Si todo va bien, renderiza la plantilla HTML pasándole los datos
+    print(f"Datos obtenidos para {datos_partido['home_name']} vs {datos_partido['away_name']}. Renderizando plantilla...")
+    return render_template('estudio.html', data=datos_partido, format_ah=format_ah_as_decimal_string_of)
+
+# --- NUEVA RUTA PARA ANALIZAR PARTIDOS FINALIZADOS ---
+@app.route('/analizar_partido', methods=['GET', 'POST'])
+def analizar_partido():
+    """
+    Ruta para analizar partidos finalizados por ID.
+    """
+    if request.method == 'POST':
+        match_id = request.form.get('match_id')
+        if match_id:
+            print(f"Recibida petición para analizar partido finalizado ID: {match_id}")
+            
+            # Llama a la función principal de tu módulo de scraping
+            datos_partido = obtener_datos_completos_partido(match_id)
+            
+            if not datos_partido or "error" in datos_partido:

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Próximos Partidos - Scraper</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { margin-top: 20px; }
+        .table thead th { background-color: #343a40; color: white; }
+        .table tbody tr:hover { background-color: #e9ecef; }
+        .team-name { font-weight: 500; }
+        .match-time { font-style: italic; color: #6c757d; }
+        .odds-badge { font-size: 0.9em; padding: 0.3em 0.6em; border-radius: 0.25rem; }
+        .handicap { background-color: #17a2b8; color: white; }
+        .goal-line { background-color: #28a745; color: white; }
+        .study-link {
+            font-size: 1.5em;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+        .study-link:hover {
+            transform: scale(1.2);
+        }
+        .preview-btn {
+            font-size: 1.5em;
+            text-decoration: none;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .preview-btn:hover {
+            transform: scale(1.2);
+        }
+        #load-more-btn {
+            display: block;
+            margin: 20px auto;
+        }
+        .analyze-section {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .analyze-btn {
+            background-color: white;
+            color: #6a11cb;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .preview-container {
+            /* visible; el TR controla el toggle */
+            background-color: #e9ecef;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+        .preview-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 5px;
+        }
+        .preview-stat {
+            text-align: center;
+        }
+        .preview-stat-value {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .preview-loading {
+            text-align: center;
+            font-style: italic;
+            color: #6c757d;
+        }
+        /* Tabla de estadísticas (reutilizada del estudio) */
+        .stat-table { width: 100%; margin-top: 8px; }
+        .stat-table td { padding: 4px 8px; text-align: center; }
+        .stat-table .stat-label { font-weight: 500; }
+        .stat-table .stat-value-home { font-weight: bold; text-align: left; }
+        .stat-table .stat-value-away { font-weight: bold; text-align: right; }
+        .score-value { font-weight: bold; color: #198754; margin: 0 6px; }
+        .ah-value { font-weight: bold; color: #6f42c1; }
+        .ou-value { font-weight: bold; color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Próximos Partidos</h1>
+        
+        <!-- Sección para analizar partidos finalizados -->
+        <div class="analyze-section">
+            <h3>⚽ ¿Quieres analizar un partido finalizado?</h3>
+            <p>Introduce el ID del partido para obtener un análisis detallado</p>
+            <a href="/analizar_partido" class="btn analyze-btn">
+                <i class="fas fa-search me-2"></i>Analizar Partido Finalizado
+            </a>
+        </div>
+        
+        {% if error %}
+        <div class="alert alert-danger mt-4">
+            <strong>Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+        <!-- Filtros -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-sm-6 col-md-4">
+                        <label for="handicap-filter" class="form-label">Filtrar por hándicap</label>
+                        <input list="handicap-options" type="text" class="form-control" id="handicap-filter" placeholder="Ej: 0, 0.25, 0.5, 1" value="{{ handicap_filter|default('', true) }}">
+                        <datalist id="handicap-options">
+                            {% if handicap_options %}
+                                {% for opt in handicap_options %}
+                                <option value="{{ opt }}"></option>
+                                {% endfor %}
+                            {% else %}
+                                {% for match in matches %}
+                                <option value="{{ match.handicap }}"></option>
+                                {% endfor %}
+                            {% endif %}
+                        </datalist>
+                    </div>
+                    <div class="col-sm-6 col-md-auto">
+                        <button id="apply-filter" type="button" class="btn btn-primary">Aplicar filtro</button>
+                        <button id="clear-filter" type="button" class="btn btn-outline-secondary ms-2">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered text-center" id="matches-table">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Partido</th>
+                        <th>Hándicap</th>
+                        <th>Línea de Goles</th>
+                        <th>Análisis Avanzado</th>
+                        <th>Vista Previa Rápida</th>
+                    </tr>
+                </thead>
+                <tbody id="matches-tbody">
+                    {% for match in matches %}
+                    <tr>
+                        <td class="align-middle match-time">{{ match.time }}</td>
+                        <td class="align-middle text-start">
+                            <span class="team-name">{{ match.home_team }}</span>
+                            <small>vs</small>
+                            <span class="team-name">{{ match.away_team }}</span>
+                        </td>
+                        <td class="align-middle">
+                            <span class="badge odds-badge handicap">{{ match.handicap }}</span>
+                        </td>
+                        <td class="align-middle">
+                            <span class="badge odds-badge goal-line">{{ match.goal_line }}</span>
+                        </td>
+                        <td class="align-middle">
+                            <!-- El enlace ahora apunta a la ruta /estudio/<id> de Flask -->
+                            <a href="/estudio/{{ match.id }}" target="_blank" class="study-link" title="Abrir estudio del partido">📊</a>
+                        </td>
+                        <td class="align-middle">
+                            <span class="preview-btn" data-match-id="{{ match.id }}" title="Ver vista previa rápida">👁️</span>
+                        </td>
+                    </tr>
+                    <tr id="preview-row-{{ match.id }}" style="display: none;">
+                        <td colspan="6" class="preview-container" id="preview-container-{{ match.id }}">
+                            <div class="preview-loading">Cargando vista previa...</div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center p-5">No se encontraron partidos. El scraper podría estar en ejecución o no hay partidos disponibles.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <button id="load-more-btn" class="btn btn-primary">Cargar 5 partidos más</button>
+    </div>
+
+    <script>
+        // Variables para el control de paginación
+        let offset = {{ matches|length }};
+        let isLoading = false;
+
+        // Aplicar/Limpiar filtro de hándicap (recarga del servidor)
+        document.getElementById('apply-filter').addEventListener('click', function() {
+            const value = document.getElementById('handicap-filter').value.trim();
+            const params = new URLSearchParams(window.location.search);
+            if (value) {
+                params.set('handicap', value);
+            } else {
+                params.delete('handicap');
+            }
+            window.location.search = params.toString();
+        });
+
+        document.getElementById('clear-filter').addEventListener('click', function() {
+            document.getElementById('handicap-filter').value = '';
+            const params = new URLSearchParams(window.location.search);
+            params.delete('handicap');
+            window.location.search = params.toString();
+        });
+
+        // Función para cargar la vista previa
+        function loadPreview(matchId) {
+            const previewContainer = document.getElementById(`preview-container-${matchId}`);
+            const previewRow = document.getElementById(`preview-row-${matchId}`);
+            
+            // Mostrar la fila de vista previa
+            previewRow.style.display = '';
+            
+            // Mostrar indicador de carga inmediatamente
+            previewContainer.innerHTML = '<div class="preview-loading">Cargando vista previa rápida...</div>';
+            
+            // Crear un timeout para la llamada fetch
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
+            
+            // Hacer una llamada AJAX para obtener los datos de vista previa
+            fetch(`/api/preview/${matchId}`, { signal: controller.signal })
+                .then(response => response.json())
+                .then(data => {
+                    clearTimeout(timeoutId); // Limpiar el timeout si la respuesta llega a tiempo
+                    
+                    if (data.error) {
+                        previewContainer.innerHTML = `<div class="preview-loading">Error: ${data.error}</div>`;
+                        return;
+                    }
+                    
+                    // Marcar como cargada
+                    previewContainer.setAttribute('data-loaded', 'true');
+                    
+                    // Generar el HTML de la vista previa
+                    let previewHTML = `
+                        <div class="row">
+                            <div class="col-lg-6 mb-3 mb-lg-0">
+                                <h6 class="text-center"><strong>Rendimiento Reciente (Últ. ${data.recent_form.home.total})</strong></h6>
+                                <div class="preview-stats">
+                                    <div class="preview-stat">
+                                        <div>${data.home_team} (Casa)</div>
+                                        <div class="preview-stat-value text-success">${data.recent_form.home.wins} V</div>
+                                    </div>
+                                    <div class="preview-stat">
+                                        <div>${data.away_team} (Fuera)</div>
+                                        <div class="preview-stat-value text-success">${data.recent_form.away.wins} V</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <h6 class="text-center"><strong>H2H Directo</strong></h6>
+                                <div class="preview-stats">
+                                    <div class="preview-stat">
+                                        <div>${data.home_team}</div>
+                                        <div class="preview-stat-value text-primary">${data.h2h_stats.home_wins}</div>
+                                    </div>
+                                    <div class="preview-stat">
+                                        <div>Empates</div>
+                                        <div class="preview-stat-value text-secondary">${data.h2h_stats.draws}</div>
+                                    </div>
+                                    <div class="preview-stat">
+                                        <div>${data.away_team}</div>
+                                        <div class="preview-stat-value text-primary">${data.h2h_stats.away_wins}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Añadir H2H Indirecto si viene en la respuesta
+                    if (data.h2h_indirect && (data.h2h_indirect.samples || []).length > 0) {
+                        const ind = data.h2h_indirect;
+                        const sumLine = `${data.home_team}: ${ind.home_better} · Empates: ${ind.draws} · ${data.away_team}: ${ind.away_better}`;
+                        const samplesHtml = ind.samples.slice(0, 3).map(s => {
+                            const v = s.verdict === 'home' ? '✅' : (s.verdict === 'away' ? '❌' : '➖');
+                            return `<span class="badge bg-light text-dark me-1 mb-1">${s.rival} | ${s.home_margin}:${s.away_margin} ${v}</span>`;
+                        }).join('');
+                        previewHTML += `
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h6 class="text-center"><strong>H2H Indirecto (rivales comunes)</strong></h6>
+                                    <div class="text-center mb-2">${sumLine}</div>
+                                    <div class="d-flex flex-wrap justify-content-center">${samplesHtml}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Añadir Hándicap actual y si el favorito habría cubierto en el último H2H
+                    if (data.handicap && (data.handicap.ah_line || data.handicap.favorite)) {
+                        const fav = data.handicap.favorite ? data.handicap.favorite : 'N/D';
+                        const line = data.handicap.ah_line ? data.handicap.ah_line : '-';
+                        const cover = data.handicap.cover_on_last_h2h ? data.handicap.cover_on_last_h2h : 'DESCONOCIDO';
+                        const coverBadgeClass = cover.includes('CUBIERTO') ? 'bg-success' : (cover.includes('NO') ? 'bg-danger' : 'bg-secondary');
+                        previewHTML += `
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h6 class="text-center"><strong>Hándicap actual</strong></h6>
+                                    <div class="text-center">AH: <strong>${line}</strong> · Favorito: <strong>${fav || '-'}</strong></div>
+                                    <div class="text-center mt-1">
+                                        <span class="badge ${coverBadgeClass}">Último H2H: ${cover}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Añadir evaluación de ataques peligrosos (comparativas indirectas)
+                    if (data.dangerous_attacks && (data.dangerous_attacks.team1 || data.dangerous_attacks.team2)) {
+                        const t1 = data.dangerous_attacks.team1;
+                        const t2 = data.dangerous_attacks.team2;
+                        const block = (t) => `
+                            <div class="preview-stat">
+                                <div>${t.name}</div>
+                                <div class="preview-stat-value">${t.own} vs ${t.rival}</div>
+                                <div><span class="badge ${t.very_superior ? 'bg-success' : 'bg-secondary'}">${t.very_superior ? 'Muy superior' : 'No superior'}</span></div>
+                            </div>`;
+                        previewHTML += `
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h6 class="text-center"><strong>Ataques peligrosos (comparativas indirectas)</strong></h6>
+                                    <div class="preview-stats">
+                                        ${t1 ? block(t1) : ''}
+                                        ${t2 ? block(t2) : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Añadir resumen del favorito en ataques peligrosos (si existe)
+                    if (data.favorite_dangerous_attacks) {
+                        const f = data.favorite_dangerous_attacks;
+                        const badge = f.very_superior ? 'bg-success' : 'bg-secondary';
+                        const label = f.very_superior ? 'Muy superior' : 'No superior';
+                        previewHTML += `
+                            <div class="row mt-2">
+                                <div class="col-12 text-center">
+                                    <small>Favorito (${f.name}) - Ataques peligrosos: ${f.own} vs ${f.rival} <span class="badge ${badge}">${label}</span></small>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    // Bloque: Rendimiento Reciente y H2H Indirecto (formato estudio)
+                    if (data.recent_indirect) {
+                        const ri = data.recent_indirect;
+                        const renderStatsTable = (rows) => {
+                            if (!rows || rows.length === 0) return '';
+                            const tr = rows.map(r => `
+                                <tr>
+                                    <td class="stat-value-home">${r.home}</td>
+                                    <td class="stat-label">${r.label}</td>
+                                    <td class="stat-value-away">${r.away}</td>
+                                </tr>
+                            `).join('');
+                            return `<table class="stat-table"><tbody>${tr}</tbody></table>`;
+                        };
+                        // Último del Local
+                        if (ri.last_home) {
+                            previewHTML += `
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <h6><strong>Rendimiento Reciente y H2H Indirecto</strong></h6>
+                                        <div><strong>Último ${data.home_team} (Casa)</strong></div>
+                                        <div>${ri.last_home.home} <span class="score-value">${ri.last_home.score}</span> ${ri.last_home.away}</div>
+                                        <div>AH: <span class="ah-value">${ri.last_home.ah}</span> | O/U: <span class="ou-value">${ri.last_home.ou || '-'}</span></div>
+                                        <div class="mt-2">👁 Est. Progresión</div>
+                                        ${renderStatsTable(ri.last_home.stats_rows)}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        // Último del Visitante
+                        if (ri.last_away) {
+                            previewHTML += `
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div><strong>Último ${data.away_team} (Fuera)</strong></div>
+                                        <div>${ri.last_away.home} <span class="score-value">${ri.last_away.score}</span> ${ri.last_away.away}</div>
+                                        <div>AH: <span class="ah-value">${ri.last_away.ah}</span> | O/U: <span class="ou-value">${ri.last_away.ou || '-'}</span></div>
+                                        <div class="mt-2">👁 Est. Progresión</div>
+                                        ${renderStatsTable(ri.last_away.stats_rows)}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        // H2H Rivales (Col3)
+                        if (ri.h2h_col3) {
+                            previewHTML += `
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div><strong>🆚 H2H Rivales (Col3)</strong></div>
+                                        <div>${ri.h2h_col3.score_line}</div>
+                                        <div>AH: <span class="ah-value">${ri.h2h_col3.ah}</span> | O/U: <span class="ou-value">${ri.h2h_col3.ou || '-'}</span></div>
+                                        <div class="mt-2">👁 Est. Progresión</div>
+                                        ${renderStatsTable(ri.h2h_col3.stats_rows)}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    previewContainer.innerHTML = previewHTML;
+                })
+                .catch(error => {
+                    clearTimeout(timeoutId); // Limpiar el timeout
+                    
+                    if (error.name === 'AbortError') {
+                        previewContainer.innerHTML = '<div class="preview-loading">Tiempo de espera agotado. La carga tardó más de 8 segundos.</div>';
+                    } else {
+                        console.error('Error:', error);
+                        previewContainer.innerHTML = '<div class="preview-loading">Error al cargar la vista previa. Por favor, inténtalo de nuevo.</div>';
+                    }
+                });
+        }
+
+        // Manejar el clic en los botones de vista previa
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('preview-btn')) {
+                const matchId = e.target.getAttribute('data-match-id');
+                const previewRow = document.getElementById(`preview-row-${matchId}`);
+                const previewContainer = document.getElementById(`preview-container-${matchId}`);
+                
+                // Si la vista previa ya está cargada, simplemente la mostramos/ocultamos
+                if (previewRow.style.display === '') {
+                    previewRow.style.display = 'none';
+                } else {
+                    // Si ya tiene datos (atributo 'data-loaded'), solo la mostramos
+                    if (previewContainer.getAttribute('data-loaded') === 'true') {
+                        previewRow.style.display = '';
+                        return;
+                    }
+                    // Si no está cargada, la cargamos
+                    loadPreview(matchId);
+                }
+            }
+        });
+
+        // Manejar el clic en el botón de cargar más
+        document.getElementById('load-more-btn').addEventListener('click', function() {
+            if (isLoading) return;
+            
+            isLoading = true;
+            this.disabled = true;
+            this.textContent = 'Cargando...';
+            
+            // Hacer una llamada AJAX para obtener más partidos
+            const currentFilter = document.getElementById('handicap-filter').value.trim();
+            const extraParam = currentFilter ? `&handicap=${encodeURIComponent(currentFilter)}` : '';
+            fetch(`/api/matches?offset=${offset}&limit=5${extraParam}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error al cargar más partidos: ' + data.error);
+                        return;
+                    }
+                    
+                    const matches = data.matches;
+                    if (matches.length === 0) {
+                        // No hay más partidos para cargar
+                        this.textContent = 'No hay más partidos';
+                        return;
+                    }
+                    
+                    // Agregar los nuevos partidos a la tabla
+                    const tbody = document.getElementById('matches-tbody');
+                    matches.forEach(match => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="align-middle match-time">${match.time}</td>
+                            <td class="align-middle text-start">
+                                <span class="team-name">${match.home_team}</span>
+                                <small>vs</small>
+                                <span class="team-name">${match.away_team}</span>
+                            </td>
+                            <td class="align-middle">
+                                <span class="badge odds-badge handicap">${match.handicap}</span>
+                            </td>
+                            <td class="align-middle">
+                                <span class="badge odds-badge goal-line">${match.goal_line}</span>
+                            </td>
+                            <td class="align-middle">
+                                <a href="/estudio/${match.id}" target="_blank" class="study-link" title="Abrir estudio del partido">📊</a>
+                            </td>
+                            <td class="align-middle">
+                                <span class="preview-btn" data-match-id="${match.id}" title="Ver vista previa rápida">👁️</span>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                        
+                        // Agregar la fila de vista previa
+                        const previewRow = document.createElement('tr');
+                        previewRow.id = `preview-row-${match.id}`;
+                        previewRow.style.display = 'none';
+                        previewRow.innerHTML = `
+                            <td colspan="6" class="preview-container" id="preview-container-${match.id}">
+                                <div class="preview-loading">Cargando vista previa...</div>
+                            </td>
+                        `;
+                        tbody.appendChild(previewRow);
+                    });
+                    
+                    // Actualizar el offset para la próxima carga
+                    offset += matches.length;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cargar más partidos. Por favor, inténtalo de nuevo.');
+                })
+                .finally(() => {
+                    isLoading = false;
+                    this.disabled = false;
+                    this.textContent = 'Cargar 5 partidos más';
+                });
+        });
+    </script>
+    
+    <!-- Font Awesome for icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</body>
+</html>

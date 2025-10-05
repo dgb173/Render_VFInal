@@ -1,0 +1,2508 @@
+<div id="info">
+        
+
+
+<div id="team-main">
+    <div class="innerPage">
+        
+<link href="/content/matchHead?v=Hc0LWI8mm7xOb6gKP0PH3tkePRawISjHByg3pI2KafQ1" rel="stylesheet">
+
+<div class="fbheader" id="fbheader">
+    <div class="row">
+        <span class="LName">
+            <span onclick="window.open('//football.nowgoal25.com/leagueinfo/1385')" class="sclassLink">
+                AFC U23 Asian Cup
+                        <b>&nbsp;&nbsp;·&nbsp;&nbsp;Qual.</b>
+            </span>
+        </span>
+        <span class="time" name="timeData" data-t="9/9/2025 9:00:00 AM" data-tf="13">
+            <script>document.write(timeToText(ToLocalTime('9/9/2025 9:00:00 AM'), 13))</script>09-09-2025 11:00 Tuesday
+        </span>
+    </div>
+    <div class="row">
+        <div class="home" onclick="handleClick()" data-url="//football.nowgoal25.com/team/summary/5144">
+            <div class="sclassName"> Singapore U23</div>
+            <img name="" src="//football.nowgoal25.com/image/team/images/1h4qpagh0m26.png" width="80" height="80" alt="Singapore U23">
+            <i class="icon iconfont icon-font-collect-off" data-tid="5144"></i>
+        </div>
+        <div class="vs">
+            <div class="row" id="headVs">
+                <div id="mScore"><div class="end"><div class="score">1</div><div><div class="row state ">Finished</div><span class="row">(<span title="Score 1st Half">0-0</span>,<span title="Score 2nd Half">1-4</span>)</span></div><div class="score">4</div></div></div>
+            </div>
+        </div>
+        <div class="guest" onclick="handleClick()" data-url="//football.nowgoal25.com/team/summary/5126">
+            <i class="icon iconfont icon-font-collect-off" data-tid="5126"></i>
+            <img name="" src="//football.nowgoal25.com/image/team/images/1h59q4xy9m29.png" width="80" height="80" alt="Bangladesh U23">
+            <div class="sclassName"> Bangladesh U23</div>
+        </div>
+    </div>
+    </div>
+
+    <ul class="mintopnav v2">
+        <li id="menu1" class=""><a href="/match/live-2789604">Detail</a></li>
+        <li id="menu2" class="on"><a href="/match/h2h-2789604">Analysis  </a></li>
+        <li id="menu3" class="">
+            <a href="/oddscomp/2789604">Odds</a>
+        </li>
+        
+        
+    </ul>
+<script>
+    var _module = 'Ng';
+    var matchTime = convertTime('2025-09-09 10:03:02');
+    var _serverTime = '2025,8,10,03,30,31';
+    var scheduleId = 2789604;
+    var _matchInfoRunTimer;
+    var scorePolling;
+    var _matchInfo = {
+        sId: parseInt('2789604'),
+        sclassId: parseInt('1385'),
+        hName: 'Singapore U23',
+        gName: 'Bangladesh U23',
+        lName: 'AFC U23 Asian Cup',
+        lNameES:'AFC U23',
+        hId: parseInt('5144'),
+        gId: parseInt('5126'),
+        state: parseInt('-1'),
+        matchTime:'9/9/2025 5:00:00 PM',
+        isNeutrality: Boolean(true)
+    }
+
+     //GTM Schema Markup 用
+    var homeTeam = 'Singapore U23';
+    var awayTeam = 'Bangladesh U23';
+    var doorTime = '09:00:00.000+08:00';
+    var startDate = '2025-09-09';
+    var place = '';
+    var leagueName = 'AFC U23 Asian Cup';
+    var eventStatus = 'Finished';
+
+    $(document).ready(function () {
+        startInitFavTimer(initFavTeam);
+
+        if ($("#explain").length) {
+            $("#explain").html(explainList($("#explain").attr("data-explainlist"), _locModel.T.T_Home, _locModel.T.T_Away))
+        }
+        if (_matchInfo.state != -1) {
+            showLiveIcon()
+        }
+        //赛事时间更新
+        if (_matchInfo.state > -1) {
+            loadMatchScore();
+        }
+    })
+
+    function handleClick(){
+        var parent = this.event.currentTarget
+        var ele = this.event.target
+        if(ele.tagName == 'IMG' || ele.classList.contains('sclassName')){
+            var url = parent.getAttribute('data-url');
+            window.open(url)
+        }else{
+            favTeam(ele.tagName == 'I' ? ele : $(parent).find("i"))
+        }
+        return;
+    }
+
+    function explainList(n, t, i) {
+        if (!n || n == "")
+            return "";
+        var u = []
+            , r = n.split(";");
+        /*return r.length > 0 && r[0] != "" && u.push(r[0].replace(",", (_locModel.T.T_Ex_Min || "Min") + "[") + "]"),*/
+        return r.length > 1 && r[1] != "" && u.push((_locModel.T.T_TwoRounds || "Two Rounds") + "[" + r[1] + "]"),
+            r.length > 2 && r[2] != "" && u.push(r[2].replace("1,", "120" + (_locModel.T.T_Ex_Min || "Min") + "[").replace("2,", (_locModel.T.T_ST_Ot || "Ot") + "[").replace("3,", (_locModel.T.T_ST_Ot || "Ot") + "'[") + "]"),
+            r.length > 3 && r[3] != "" && u.push((_locModel.T.T_Penalty || "Pen") + "[" + r[3] + "]"),
+            r.length > 4 && r[4] == "1" ? u.push(t + " " + (_locModel.T.T_Win || "Win")) : r.length > 4 && r[4] == "2" && u.push(i + " " + (_locModel.T.T_Win || "Win")),
+            u.join(", ")
+    }
+    function showLiveIcon() {
+        var txturl = getTvLinkTxtUrl(_module);
+        $.get(txturl + Date.parse(new Date()), function (result) {
+            if (result) {
+                var data = result.split("$");
+                if (data[1] == "") return;
+                var matchArr = data[1].split("!");
+                for (var i = 0; i < matchArr.length; i++) {
+                    var list = matchArr[i].split("^");
+                    var matchId = list[0]
+                    var link = list[1]
+                    if (_isForApp) {
+                        link = appOpenBrowserUrl(link)
+                    }
+                    if (matchId == _matchInfo.sId) {
+                        $("#liveIcon").show()
+                        $("#liveIcon").click(function () {
+                            window.open(link)
+                        })
+                        break
+                    }
+                }
+            }
+        })
+    }
+
+    //服务器时差
+    var _difftime;
+    var _injuryTime = "";
+    function getDiffTime() {
+        if (_serverTime) {
+            var sps = _serverTime.split(",");
+            _difftime = new Date() - new Date(sps[0], sps[1], sps[2], sps[3], sps[4], sps[5]);
+        }
+    }
+    getDiffTime();
+
+    function loadMatchScore() {
+        var request = "/Ajax/SoccerAjax/?type=11&id=" + scheduleId;
+        bomHelper.ajaxGet(request, updateMatchScore);
+    }
+    var isFirst = true;
+    function updateMatchScore(result) {
+        var data = "";
+        if (!CheckEmpty(result)) {
+            result = JSON.parse(result);
+            if (result.ErrCode == 0 && result.Data != undefined) {
+                data = result.Data;
+            }
+        }
+        if (!CheckEmpty(data)) {
+            document.getElementById("mScore").innerHTML = data.html;
+            _matchInfo.state = parseInt(data.state);
+            matchTime = convertTime(data.time);
+            if (isFirst) _injuryTime = data.injuryTime;
+            isFirst = false;
+            upDateMatchTime();
+        }
+        if (_matchInfoRunTimer != null)
+            window.clearTimeout(_matchInfoRunTimer);
+        if (_matchInfo.state > -1) {
+            _matchInfoRunTimer = window.setTimeout("loadMatchScore()", 30 * 1000);
+        }
+        if (_matchInfo.state == -1){
+            $("#otherInfo").hide()
+        }
+    }
+
+    function upDateMatchTime() {
+        var ms = "";
+        var goTime = "";
+        var timeIcon = "<span class='in-gif k'></span>";
+        var atTime = (_injuryTime != undefined && _injuryTime != "") ? " (AT+" + _injuryTime + ")" : "";
+        switch (_matchInfo.state) {
+            case 5: ms = _locModel.T.T_ST_Pen; break;//点球
+            case 4: ms = _locModel.T.T_ST_Ot; break;//加时
+            case 3: ms = _locModel.T.T_ST_Part2; break;//下半场
+            case 2: ms = _locModel.T.T_ST_HT; break;//中场
+            case 1: ms = _locModel.T.T_ST_Part1; break;//上半场
+        }
+        if (_matchInfo.state == 1) {
+            goTime = Math.floor((new Date() - matchTime - _difftime) / 60000);
+            if (goTime < 1) {
+                goTime = "1";
+            } else if (goTime > 45) {
+                var t3 = goTime - 45;
+                goTime = "45+" + (t3 > 15 ? 15 : t3);
+            }
+            if (atTime != "") {
+                ms = "";
+            }
+            else {
+                ms += " - ";
+            }
+            ms += goTime + timeIcon + atTime;
+        } else if (_matchInfo.state == 3) {
+            goTime = Math.floor((new Date() - matchTime - _difftime) / 60000) + 46;
+            if (goTime < 46) {
+                goTime = "46";
+            } else if (goTime > 90) {
+                var t3 = goTime - 90;
+                goTime = "90+" + (t3 > 15 ? 15 : t3);
+            }
+            if (atTime != "") {
+                ms = "";
+            }
+            else {
+                ms += " - ";
+            }
+            ms += goTime + timeIcon + atTime;
+        }
+        if (ms != "" && document.getElementById("matchTime")) {
+            document.getElementById("matchTime").innerHTML = ms;
+        }
+    }
+
+    //收藏相关
+    function initFavTeam() {
+        var tids = Config.getFavTeamIds();
+        $("[data-tid]").each(function () {
+            var id = $(this).attr("data-tid")
+            if (tids.indexOf(id) != -1) {
+                $(this).removeClass("icon-font-collect-off").addClass("icon-font-collect-on")
+            }
+        })
+    }
+
+    function favTeam(el) {
+        this.event.stopPropagation()
+        var tids = Config.getFavTeamIds();
+        var id = $(el).attr("data-tid");
+        if ($(el).hasClass("icon-font-collect-off")) {  //收藏
+            $(el).removeClass("icon-font-collect-off").addClass("icon-font-collect-on")
+            if (tids.indexOf(id) == -1) {
+                tids.push(id);
+            }
+        } else {  //取消
+            $(el).removeClass("icon-font-collect-on").addClass("icon-font-collect-off")
+            var index = tids.indexOf(id);
+            if (index != -1) {
+                tids.splice(index, 1);
+            }
+        }
+        Config.setFavTeamIds(tids);
+    }
+
+    //版本切换
+    var _soccerInpageTipCookie = "SoccerInpageTip";
+
+    function switchVersion(val) {
+        let btns = $("#switchVersion").find(".switch-btn").find("span");
+        let hasChange = $(btns[0]).hasClass("on") && val == 1 || $(btns[1]).hasClass("on") && val == 0;
+        if (hasChange) {
+            writeShareCookie(_soccerInpageVersionCookie, val, new Date((new Date()).getTime() + 365 * 24 * 3600000));
+            if (val == 1) {
+                btns[0].classList.remove("on");
+                btns[1].classList.add("on");
+            } else {
+                btns[0].classList.add("on");
+                btns[1].classList.remove("on");
+            }
+            soccerInPage.analysis(_matchInfo.sId, _matchInfo.hName, _matchInfo.gName, _matchInfo.lName, true);
+        }
+    }
+
+    function readedTip() {
+        writeShareCookie(_soccerInpageTipCookie, 1, new Date((new Date()).getTime() + 1 * 24 * 3600000));
+        $("#switchVersion").find(".pop").hide();
+    }
+    function getxml() {
+        try {
+            oXmlHttp.open("get", "/gf/data/change_en.xml?" + Date.parse(new Date()), true);
+            oXmlHttp.onreadystatechange = xmlHandle;
+            oXmlHttp.send(null);
+            scorePolling = window.setTimeout("getxml()", 2000);
+        } catch (e) { }
+    }
+    function openWebsocketForChg() {
+        var channels = ["change_xml"];
+        wsUtil.connectWs(channels, function (data) {
+            if (data["change_xml"] != undefined) {
+                var list = data["change_xml"].split("!");
+                for (var i = 0; i < list.length; i++) {
+                    var line = list[i].split("^");
+                    if (scheduleId == line[0]) {
+                        _injuryTime = line[21];
+                        upDateMatchTime();
+                        break;
+                    }
+                }
+            }
+        }, function () {
+            //console.log("轮询启动");
+            if (scorePolling) window.clearTimeout(scorePolling);
+            scorePolling = window.setTimeout("getxml()", 2000);
+        }, function () {
+            //console.log("轮询关闭");
+            if (scorePolling) window.clearTimeout(scorePolling);
+        })
+    }
+    !(function () {
+        if ($("#switchVersion")[0]) {
+            let tipVal = getCookie(_soccerInpageTipCookie);
+            if (!CheckEmpty(tipVal)) {
+                $("#switchVersion").find(".pop").hide();
+            }
+            let btnVal = getCookie(_soccerInpageVersionCookie);
+            if (!CheckEmpty(btnVal) && btnVal == 1) {
+                $("#switchVersion").find(".switch-btn").find("span")[0].classList.remove("on");
+                $("#switchVersion").find(".switch-btn").find("span")[1].classList.add("on");
+            }
+            //当前版本与页面不匹配，修正页面
+            if (_pageType == 42 && btnVal != 1 || _pageType != 42 && btnVal == 1) {
+                soccerInPage.analysis(_matchInfo.sId, _matchInfo.hName, _matchInfo.gName, _matchInfo.lName, true);
+            }
+        }
+        if (_websocket) {
+            openWebsocketForChg();
+        }
+    })()
+</script>
+
+    </div>
+    <div id="porletP_Group">
+        
+
+        
+        
+
+        
+
+        
+        
+
+        
+            
+                    
+        
+        
+
+        
+        
+
+        
+
+        
+        
+
+        
+
+        
+        
+
+        
+
+        
+        
+
+
+
+<script type="text/template" id="oddsBarTPL">
+    <li class="vote">
+        <div class="item">
+            <div class="fx-ht-data">
+                <div class="home-bg bar_shade" sameodds-rate="{$UpRate}">
+                    <span class="fx-ht-data-w">{$UpRate}%</span>
+                </div>
+            </div>
+            <div class="fx-ht-data">
+                <div class="draw-bg bar_shade" sameodds-rate="{$DrawRate}">
+                    <span class="fx-ht-data-w">{$DrawRate}%</span>
+                </div>
+            </div>
+            <div class="fx-ht-data">
+                <div class="away-bg bar_shade" sameodds-rate="{$DownRate}">
+                    <span class="fx-ht-data-w">{$DownRate}%</span>
+                </div>
+            </div>
+        </div>
+        <div class="pItem">{$Title}</div>
+    </li>
+</script>
+
+<script src="/scripts/soccer/sameOddsCount?v=FG-BAIJPZ27b8tSZL_HuIaGDRMZs8oaKFCjO4Dfe3V01"></script>
+
+
+
+
+        
+
+        
+            
+
+        
+
+        
+            
+
+        
+
+        
+            
+
+        
+
+        
+                    
+                    <div id="porletAd0" class="ad_l1" style="margin-bottom: 5px">
+            <script language="javascript" type="text/javascript">getAnList("l1");</script><a href="https://live.nowgoal59.com/home/admanage/69" target="_blank" title="" rel="nofollow"><img src="https://imgng.thscore.fun/mn/20250827142034.webp" width="1040px" height="45"></a>
+        </div><div class="porletP" id="porletP0">
+            <div id="liveCompareDiv"><h2 class="team-table-title">Live Odds Comparison</h2><table width="100%" border="0" cellpadding="0" cellspacing="0" class="team-table-other"><tbody><tr height="20"><th rowspan="2" width="13%" height="24"><b>Company</b><img src="/images/fx.svg" class="addIcon" onclick="addOddsCmp()" alt="select"></th><th rowspan="2" width="32" class="ll rl"></th><th colspan="3" class="rl no-b-l"><b>Asian Handicap Odds</b></th><th colspan="3" class="rl no-b-l"><b>1X2 Odds</b></th><th colspan="3" class="rl no-b-l"><b>Over/Under Odds</b></th><th rowspan="2" width="15"><b>Trends</b></th></tr><tr height="20"><th width="8%">Home</th><th width="8%">Asian Handicap</th><th width="8%" class="rl">Away</th><th width="8%">Home</th><th width="8%">Draw</th><th width="8%" class="rl">Away</th><th width="8%">Over</th><th width="8%">Goals</th><th width="8%" class="rl">Under</th></tr><tr bgcolor="#FFFFFF" style="height:20px;" id="tr_o_1_8" name="earlyOdds"><td rowspan="3" class="companyBg"><b>Bet365</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="1.02">1.02</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.77">0.77</td><td class="hbg-td1" name="oddsData" data-o="2.15" data-e="1"> 2.15</td><td class="hbg-td1" name="oddsData" data-o="3.10" data-e="1"> 3.10</td><td class="hbg-td1 rl" name="oddsData" data-o="3.10" data-e="1">3.10</td><td name="oddsData" data-o="0.80">0.80</td><td data-o="2/2.5">2/2.5</td><td class="rl" name="oddsData" data-o="1.00">1.00</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',8,'Bet365',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;" class="odds" id="tr_o_2_8" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="1.02">1.02</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.77">0.77</td><td class="hbg-td1" name="oddsData" data-o="2.30" data-e="1">2.30</td><td class="hbg-td1" name="oddsData" data-o="2.90" data-e="1">2.90</td><td class="hbg-td1 rl" name="oddsData" data-o="3.00" data-e="1">3.00</td><td name="oddsData" data-o="0.80">0.80</td><td data-o="2/2.5">2/2.5</td><td class="rl" name="oddsData" data-o="1.00">1.00</td></tr><tr bgcolor="#FFFFF0" style="height:20px;" class="odds" id="tr_o_3_8" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData" data-o="0.90">0.90</td><td class="hbg-td2r" data-o="0">0</td><td class="rl hbg-td2r" name="oddsData" data-o="0.90">0.90</td><td class="hbg-td1r" name="oddsData" data-o="51.00" data-e="1">51.00</td><td class="hbg-td1r" name="oddsData" data-o="34.00" data-e="1">34.00</td><td class="hbg-td1r rl" name="oddsData" data-o="1.01" data-e="1">1.01</td><td class="hbg-td4r" name="oddsData" data-o="3.40">3.40</td><td class="hbg-td4r" data-o="5.5">5.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.20">0.20</td></tr> <tr bgcolor="#FFFFFF" style="height:20px;" id="tr_o_1_31" name="earlyOdds"><td rowspan="3" class="companyBg"><b>Sbobet</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="1.01">1.01</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.75">0.75</td><td class="hbg-td1" name="oddsData" data-o="2.24" data-e="1"> 2.24</td><td class="hbg-td1" name="oddsData" data-o="3.01" data-e="1"> 3.01</td><td class="hbg-td1 rl" name="oddsData" data-o="2.69" data-e="1">2.69</td><td name="oddsData" data-o="0.96">0.96</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.80">0.80</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',31,'Sbobet',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;" class="odds" id="tr_o_2_31" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="1.02">1.02</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.74">0.74</td><td class="hbg-td1" name="oddsData" data-o="2.25" data-e="1">2.25</td><td class="hbg-td1" name="oddsData" data-o="2.96" data-e="1">2.96</td><td class="hbg-td1 rl" name="oddsData" data-o="2.70" data-e="1">2.70</td><td name="oddsData" data-o="1.02">1.02</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.74">0.74</td></tr><tr bgcolor="#FFFFF0" style="height:20px;" class="odds" id="tr_o_3_31" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData" data-o="0.09">0.09</td><td class="hbg-td2r" data-o="-0/0.5">-0/0.5</td><td class="rl hbg-td2r" name="oddsData" data-o="4.00">4.00</td><td class="hbg-td1r" name="oddsData" data-o="48.00" data-e="1">48.00</td><td class="hbg-td1r" name="oddsData" data-o="8.00" data-e="1">8.00</td><td class="hbg-td1r rl" name="oddsData" data-o="1.03" data-e="1">1.03</td><td class="hbg-td4r" name="oddsData" data-o="4.34">4.34</td><td class="hbg-td4r" data-o="5.5">5.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.09">0.09</td></tr> <tr bgcolor="#FFFFFF" style="height:20px;display:none;" id="tr_o_1_17" name="earlyOdds"><td rowspan="3" class="companyBg"><b>Mansion88</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.90">0.90</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.86">0.86</td><td class="hbg-td1" name="oddsData" data-o="2.09" data-e="1"> 2.09</td><td class="hbg-td1" name="oddsData" data-o="3.25" data-e="1"> 3.25</td><td class="hbg-td1 rl" name="oddsData" data-o="3.10" data-e="1">3.10</td><td name="oddsData" data-o="0.87">0.87</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.89">0.89</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',17,'Mansion88',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_2_17" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="0.96">0.96</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.80">0.80</td><td class="hbg-td1" name="oddsData" data-o="2.20" data-e="1">2.20</td><td class="hbg-td1" name="oddsData" data-o="3.10" data-e="1">3.10</td><td class="hbg-td1 rl" name="oddsData" data-o="3.00" data-e="1">3.00</td><td name="oddsData" data-o="1.05">1.05</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.71">0.71</td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_3_17" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData" data-o="1.08">1.08</td><td class="hbg-td2r" data-o="0">0</td><td class="rl hbg-td2r" name="oddsData" data-o="0.76">0.76</td><td class="hbg-td1r" name="oddsData" data-o="11.00" data-e="1">11.00</td><td class="hbg-td1r" name="oddsData" data-o="3.20" data-e="1">3.20</td><td class="hbg-td1r rl" name="oddsData" data-o="1.40" data-e="1">1.40</td><td class="hbg-td4r" name="oddsData" data-o="4.16">4.16</td><td class="hbg-td4r" data-o="4.5">4.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.06">0.06</td></tr> <tr bgcolor="#FFFFFF" style="height:20px;" id="tr_o_1_23" name="earlyOdds"><td rowspan="3" class="companyBg"><b>188bet</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.82">0.82</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.90">0.90</td><td class="hbg-td1" name="oddsData" data-o="2.03" data-e="1"> 2.03</td><td class="hbg-td1" name="oddsData" data-o="3.30" data-e="1"> 3.30</td><td class="hbg-td1 rl" name="oddsData" data-o="2.83" data-e="1">2.83</td><td name="oddsData" data-o="0.81">0.81</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.91">0.91</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',23,'188bet',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;" class="odds" id="tr_o_2_23" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="0.96">0.96</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.76">0.76</td><td class="hbg-td1" name="oddsData" data-o="2.22" data-e="1">2.22</td><td class="hbg-td1" name="oddsData" data-o="3.20" data-e="1">3.20</td><td class="hbg-td1 rl" name="oddsData" data-o="2.59" data-e="1">2.59</td><td name="oddsData" data-o="0.94">0.94</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.78">0.78</td></tr><tr bgcolor="#FFFFF0" style="height:20px;" class="odds" id="tr_o_3_23" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData" data-o="0.96">0.96</td><td class="hbg-td2r" data-o="0">0</td><td class="rl hbg-td2r" name="oddsData" data-o="0.88">0.88</td><td class="hbg-td1r" name="oddsData" data-o="21.00" data-e="1">21.00</td><td class="hbg-td1r" name="oddsData" data-o="11.50" data-e="1">11.50</td><td class="hbg-td1r rl" name="oddsData" data-o="1.01" data-e="1">1.01</td><td class="hbg-td4r" name="oddsData" data-o="2.04">2.04</td><td class="hbg-td4r" data-o="4.5">4.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.31">0.31</td></tr> <tr bgcolor="#FFFFFF" style="height:20px;display:none;" id="tr_o_1_24" name="earlyOdds"><td rowspan="3" class="companyBg"><b>12BET</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.86">0.86</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.90">0.90</td><td class="hbg-td1" name="oddsData" data-o="2.04" data-e="1"> 2.04</td><td class="hbg-td1" name="oddsData" data-o="3.30" data-e="1"> 3.30</td><td class="hbg-td1 rl" name="oddsData" data-o="3.15" data-e="1">3.15</td><td name="oddsData" data-o="0.85">0.85</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.91">0.91</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',24,'12BET',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_2_24" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="1.00">1.00</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.76">0.76</td><td class="hbg-td1" name="oddsData" data-o="2.23" data-e="1">2.23</td><td class="hbg-td1" name="oddsData" data-o="3.10" data-e="1">3.10</td><td class="hbg-td1 rl" name="oddsData" data-o="2.97" data-e="1">2.97</td><td name="oddsData" data-o="1.09">1.09</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.67">0.67</td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_3_24" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData" data-o="1.02">1.02</td><td class="hbg-td2r" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2r" name="oddsData" data-o="0.82">0.82</td><td class="hbg-td1r" name="oddsData" data-o="2.35" data-e="1">2.35</td><td class="hbg-td1r" name="oddsData" data-o="2.55" data-e="1">2.55</td><td class="hbg-td1r rl" name="oddsData" data-o="3.30" data-e="1">3.30</td><td class="hbg-td4r" name="oddsData" data-o="0.92">0.92</td><td class="hbg-td4r" data-o="1.5">1.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.90">0.90</td></tr> <tr bgcolor="#FFFFFF" style="height:20px;display:none;" id="tr_o_1_3" name="earlyOdds"><td rowspan="3" class="companyBg"><b>Crown</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.81">0.81</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.89">0.89</td><td class="hbg-td1" name="oddsData" data-o="2.03" data-e="1"> 2.03</td><td class="hbg-td1" name="oddsData" data-o="3.30" data-e="1"> 3.30</td><td class="hbg-td1 rl" name="oddsData" data-o="2.83" data-e="1">2.83</td><td name="oddsData" data-o="0.80">0.80</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.90">0.90</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',3,'Crown',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_2_3" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="1.08">1.08</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.62">0.62</td><td class="hbg-td1" name="oddsData" data-o="2.22" data-e="1">2.22</td><td class="hbg-td1" name="oddsData" data-o="3.20" data-e="1">3.20</td><td class="hbg-td1 rl" name="oddsData" data-o="2.59" data-e="1">2.59</td><td name="oddsData" data-o="0.96">0.96</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.74">0.74</td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_3_3" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData" data-o="0.95">0.95</td><td class="hbg-td2r" data-o="0">0</td><td class="rl hbg-td2r" name="oddsData" data-o="0.87">0.87</td><td class="hbg-td1r" name="oddsData" data-o="21.00" data-e="1">21.00</td><td class="hbg-td1r" name="oddsData" data-o="11.50" data-e="1">11.50</td><td class="hbg-td1r rl" name="oddsData" data-o="1.01" data-e="1">1.01</td><td class="hbg-td4r" name="oddsData" data-o="2.00">2.00</td><td class="hbg-td4r" data-o="4.5">4.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.30">0.30</td></tr> <tr bgcolor="#FFFFFF" style="height:20px;display:none;" id="tr_o_1_42" name="earlyOdds"><td rowspan="3" class="companyBg"><b>18Bet</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.87">0.87</td><td class="hbg-td2" data-o="0.5">0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.77">0.77</td><td class="hbg-td1" name="oddsData" data-o="1.95" data-e="1"> 1.95</td><td class="hbg-td1" name="oddsData" data-o="3.50" data-e="1"> 3.50</td><td class="hbg-td1 rl" name="oddsData" data-o="3.40" data-e="1">3.40</td><td name="oddsData" data-o="0.79">0.79</td><td data-o="2.5/3">2.5/3</td><td class="rl" name="oddsData" data-o="0.86">0.86</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',42,'18Bet',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_2_42" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="0.95">0.95</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.71">0.71</td><td class="hbg-td1" name="oddsData" data-o="2.35" data-e="1">2.35</td><td class="hbg-td1" name="oddsData" data-o="3.10" data-e="1">3.10</td><td class="hbg-td1 rl" name="oddsData" data-o="2.85" data-e="1">2.85</td><td name="oddsData" data-o="0.93">0.93</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.73">0.73</td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_3_42" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData" data-o="0.91">0.91</td><td class="hbg-td2r" data-o="0">0</td><td class="rl hbg-td2r" name="oddsData" data-o="0.74">0.74</td><td class="hbg-td1r" name="oddsData" data-o="51.00" data-e="1">51.00</td><td class="hbg-td1r" name="oddsData" data-o="34.00" data-e="1">34.00</td><td class="hbg-td1r rl" name="oddsData" data-o="1.01" data-e="1">1.01</td><td class="hbg-td4r" name="oddsData" data-o="1.76">1.76</td><td class="hbg-td4r" data-o="4.5">4.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.36">0.36</td></tr> <tr bgcolor="#FFFFFF" style="height:20px;display:none;" id="tr_o_1_12" name="earlyOdds"><td rowspan="3" class="companyBg"><b>Easybet</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.81">0.81</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.89">0.89</td><td class="hbg-td1" name="oddsData" data-o="2.03" data-e="1"> 2.03</td><td class="hbg-td1" name="oddsData" data-o="3.30" data-e="1"> 3.30</td><td class="hbg-td1 rl" name="oddsData" data-o="2.80" data-e="1">2.80</td><td name="oddsData" data-o="0.80">0.80</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.89">0.89</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',12,'Easybet',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_2_12" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="1.02">1.02</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.77">0.77</td><td class="hbg-td1" name="oddsData" data-o="2.45" data-e="1">2.45</td><td class="hbg-td1" name="oddsData" data-o="3.00" data-e="1">3.00</td><td class="hbg-td1 rl" name="oddsData" data-o="2.80" data-e="1">2.80</td><td name="oddsData" data-o="0.93">0.93</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.76">0.76</td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_3_12" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData" data-o="0.96">0.96</td><td class="hbg-td2r" data-o="0">0</td><td class="rl hbg-td2r" name="oddsData" data-o="0.88">0.88</td><td class="hbg-td1r" name="oddsData" data-o="21.00" data-e="1">21.00</td><td class="hbg-td1r" name="oddsData" data-o="11.50" data-e="1">11.50</td><td class="hbg-td1r rl" name="oddsData" data-o="1.01" data-e="1">1.01</td><td class="hbg-td4r" name="oddsData" data-o="1.80">1.80</td><td class="hbg-td4r" data-o="4.5">4.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.30">0.30</td></tr> <tr bgcolor="#FFFFFF" style="height:20px;display:none;" id="tr_o_1_1" name="earlyOdds"><td rowspan="3" class="companyBg"><b>Macauslot</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.80">0.80</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.90">0.90</td><td class="hbg-td1" name="oddsData" data-o="2.02" data-e="1"> 2.02</td><td class="hbg-td1" name="oddsData" data-o="3.35" data-e="1"> 3.35</td><td class="hbg-td1 rl" name="oddsData" data-o="2.80" data-e="1">2.80</td><td name="oddsData" data-o="0.75">0.75</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.85">0.85</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',1,'Macauslot',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_2_1" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="1.02">1.02</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.68">0.68</td><td class="hbg-td1" name="oddsData" data-o="2.22" data-e="1">2.22</td><td class="hbg-td1" name="oddsData" data-o="3.20" data-e="1">3.20</td><td class="hbg-td1 rl" name="oddsData" data-o="2.58" data-e="1">2.58</td><td name="oddsData" data-o="0.90">0.90</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.70">0.70</td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_3_1" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData"></td><td class="hbg-td2r"></td><td class="rl hbg-td2r" name="oddsData"></td><td class="hbg-td1r"></td><td class="hbg-td1r"></td><td class="hbg-td1r rl"></td><td class="hbg-td4r" name="oddsData"></td><td class="hbg-td4r"></td><td class="rl hbg-td4r" name="oddsData"></td></tr> <tr bgcolor="#FFFFFF" style="height:20px;display:none;" id="tr_o_1_47" name="earlyOdds"><td rowspan="3" class="companyBg"><b>pinnacle</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.91">0.91</td><td class="hbg-td2" data-o="0.5">0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.81">0.81</td><td class="hbg-td1" name="oddsData" data-o="1.91" data-e="1"> 1.91</td><td class="hbg-td1" name="oddsData" data-o="3.40" data-e="1"> 3.40</td><td class="hbg-td1 rl" name="oddsData" data-o="3.32" data-e="1">3.32</td><td name="oddsData" data-o="0.81">0.81</td><td data-o="2.5/3">2.5/3</td><td class="rl" name="oddsData" data-o="0.89">0.89</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',47,'pinnacle',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_2_47" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="1.04">1.04</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.72">0.72</td><td class="hbg-td1" name="oddsData" data-o="2.37" data-e="1">2.37</td><td class="hbg-td1" name="oddsData" data-o="2.97" data-e="1">2.97</td><td class="hbg-td1 rl" name="oddsData" data-o="2.89" data-e="1">2.89</td><td name="oddsData" data-o="0.93">0.93</td><td data-o="2/2.5">2/2.5</td><td class="rl" name="oddsData" data-o="0.81">0.81</td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_3_47" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData"></td><td class="hbg-td2r"></td><td class="rl hbg-td2r" name="oddsData"></td><td class="hbg-td1r"></td><td class="hbg-td1r"></td><td class="hbg-td1r rl"></td><td class="hbg-td4r" name="oddsData"></td><td class="hbg-td4r"></td><td class="rl hbg-td4r" name="oddsData"></td></tr> <tr bgcolor="#FFFFFF" style="height:20px;display:none;" id="tr_o_1_14" name="earlyOdds"><td rowspan="3" class="companyBg"><b>Vcbet</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.79">0.79</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.94">0.94</td><td class="hbg-td1" name="oddsData" data-o="2.05" data-e="1"> 2.05</td><td class="hbg-td1" name="oddsData" data-o="3.50" data-e="1"> 3.50</td><td class="hbg-td1 rl" name="oddsData" data-o="3.10" data-e="1">3.10</td><td name="oddsData" data-o="0.86">0.86</td><td data-o="2.5/3">2.5/3</td><td class="rl" name="oddsData" data-o="0.91">0.91</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',14,'Vcbet',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_2_14" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="1.00">1.00</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.74">0.74</td><td class="hbg-td1" name="oddsData" data-o="2.30" data-e="1">2.30</td><td class="hbg-td1" name="oddsData" data-o="3.25" data-e="1">3.25</td><td class="hbg-td1 rl" name="oddsData" data-o="2.80" data-e="1">2.80</td><td name="oddsData" data-o="0.96">0.96</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.82">0.82</td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_3_14" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData" data-o="0.86">0.86</td><td class="hbg-td2r" data-o="0">0</td><td class="rl hbg-td2r" name="oddsData" data-o="0.86">0.86</td><td class="hbg-td1r" name="oddsData" data-o="46.00" data-e="1">46.00</td><td class="hbg-td1r" name="oddsData" data-o="9.00" data-e="1">9.00</td><td class="hbg-td1r rl" name="oddsData" data-o="1.04" data-e="1">1.04</td><td class="hbg-td4r" name="oddsData" data-o="1.43">1.43</td><td class="hbg-td4r" data-o="4.5">4.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.54">0.54</td></tr> <tr bgcolor="#FFFFFF" style="height:20px;display:none;" id="tr_o_1_35" name="earlyOdds"><td rowspan="3" class="companyBg"><b>wewbet</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.79">0.79</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.95">0.95</td><td class="hbg-td1" name="oddsData" data-o="2.02" data-e="1"> 2.02</td><td class="hbg-td1" name="oddsData" data-o="3.15" data-e="1"> 3.15</td><td class="hbg-td1 rl" name="oddsData" data-o="2.94" data-e="1">2.94</td><td name="oddsData" data-o="0.84">0.84</td><td data-o="2.5/3">2.5/3</td><td class="rl" name="oddsData" data-o="0.90">0.90</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',35,'wewbet',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_2_35" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="0.98">0.98</td><td class="hbg-td2" data-o="0/0.5">0/0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.76">0.76</td><td class="hbg-td1" name="oddsData" data-o="2.29" data-e="1">2.29</td><td class="hbg-td1" name="oddsData" data-o="2.90" data-e="1">2.90</td><td class="hbg-td1 rl" name="oddsData" data-o="2.71" data-e="1">2.71</td><td name="oddsData" data-o="0.99">0.99</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.75">0.75</td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_3_35" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData" data-o="0.94">0.94</td><td class="hbg-td2r" data-o="0">0</td><td class="rl hbg-td2r" name="oddsData" data-o="0.88">0.88</td><td class="hbg-td1r" name="oddsData" data-o="10.50" data-e="1">10.50</td><td class="hbg-td1r" name="oddsData" data-o="3.37" data-e="1">3.37</td><td class="hbg-td1r rl" name="oddsData" data-o="1.36" data-e="1">1.36</td><td class="hbg-td4r" name="oddsData" data-o="2.08">2.08</td><td class="hbg-td4r" data-o="4.5">4.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.32">0.32</td></tr> <tr bgcolor="#FFFFFF" style="height:20px;display:none;" id="tr_o_1_19" name="earlyOdds"><td rowspan="3" class="companyBg"><b>Interwetten</b></td><td class="ll rl lo-f">First</td><td class="hbg-td2" name="oddsData" data-o="0.90">0.90</td><td class="hbg-td2" data-o="0.5">0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.75">0.75</td><td class="hbg-td1" name="oddsData" data-o="1.95" data-e="1"> 1.95</td><td class="hbg-td1" name="oddsData" data-o="3.50" data-e="1"> 3.50</td><td class="hbg-td1 rl" name="oddsData" data-o="3.40" data-e="1">3.40</td><td name="oddsData" data-o="0.60">0.60</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="1.10">1.10</td><td rowspan="3"><span class="odds-icon" onclick="_oddsDetailWin.open('2789604',19,'Interwetten',-1,false)"><i class="icon iconfont icon-odds"></i></span></td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_2_19" name="liveOdds"><td class="ll rl lo-f"> Live</td><td class="hbg-td2" name="oddsData" data-o="1.20">1.20</td><td class="hbg-td2" data-o="0.5">0.5</td><td class="rl hbg-td2" name="oddsData" data-o="0.55">0.55</td><td class="hbg-td1" name="oddsData" data-o="2.30" data-e="1">2.30</td><td class="hbg-td1" name="oddsData" data-o="3.20" data-e="1">3.20</td><td class="hbg-td1 rl" name="oddsData" data-o="2.90" data-e="1">2.90</td><td name="oddsData" data-o="0.83">0.83</td><td data-o="2.5">2.5</td><td class="rl" name="oddsData" data-o="0.83">0.83</td></tr><tr bgcolor="#FFFFF0" style="height:20px;display:none;" class="odds" id="tr_o_3_19" name="runOdds"><td class="ll rl lo-f2"> Run</td><td class="hbg-td2r" name="oddsData"></td><td class="hbg-td2r"></td><td class="rl hbg-td2r" name="oddsData"></td><td class="hbg-td1r" name="oddsData" data-o="85.00" data-e="1">85.00</td><td class="hbg-td1r" name="oddsData" data-o="13.00" data-e="1">13.00</td><td class="hbg-td1r rl" name="oddsData" data-o="1.03" data-e="1">1.03</td><td class="hbg-td4r" name="oddsData" data-o="1.75">1.75</td><td class="hbg-td4r" data-o="4.5">4.5</td><td class="rl hbg-td4r" name="oddsData" data-o="0.37">0.37</td></tr> <tr><td colspan="13" class="nodata" style="display: none;">No odds now. Please select other company<div class="btn" onclick="addOddsCmp()"><i class="icon iconfont icon-font-injured"></i>Select<div></div></div></td></tr></tbody></table></div>
+        </div><div id="porletAd1" class="ad_l2">
+            <script language="javascript" type="text/javascript">getAnList("l2");</script><a href="https://live.nowgoal59.com/home/admanage/569" target="_blank" title="" rel="nofollow"><img src="https://imgng.thscore.fun/mn/20250827142042.webp" width="1040px" height="45px"></a>
+        </div><div class="porletP" id="porletP1">
+                
+
+
+<div class="content strength" id="strengthChart" style="display: block;">
+    <div class="team-table-title">
+        <span class="team-table-xq-home">
+            <a onclick="openFbTeam(5144)">Singapore U23</a>
+        </span>
+        Strength Comparison
+        <span class="team-table-xq-guest">
+            <a onclick="openFbTeam(5126)">Bangladesh U23</a>
+        </span>
+    </div>
+    <div class="team-h1">
+        <span class="home-bg"></span>
+        <span class="away-bg"></span>
+    </div>
+    <div id="radar" class="radar">
+        <div class="container">
+            <div class="home_score" id="hRadarScore">76</div>
+            <div class="map" style="user-select: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);" _echarts_instance_="ec_1757475031388"><div style="position: relative; width: 371px; height: 280px; padding: 0px; margin: 0px; border-width: 0px;"><canvas data-zr-dom-id="zr_0" width="371" height="280" style="position: absolute; left: 0px; top: 0px; width: 371px; height: 280px; user-select: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); padding: 0px; margin: 0px; border-width: 0px;"></canvas></div></div>
+            <div class="guest_score" id="gRadarScore">24</div>
+        </div>
+    </div>
+    <div class="bar">
+        <ul class="options">
+            <span id="strengthOptions"><li onclick="switchBar(2)" option="2" class="on">State</li><li onclick="switchBar(3)" option="3">Attack</li><li onclick="switchBar(4)" option="4">Defence</li><li onclick="switchBar(6)" option="6">Others</li></span>
+        </ul>
+        <div>
+            <ul id="barCompareList" class="fx-tb-a compare">
+    <li>
+        <div class="fx-tb-title title">
+            <span class="team-home-f">88%</span>
+            <span>State Comparison</span>
+            <span class="team-away-f">12%</span>
+        </div>
+        <div class="team-h1">
+            <span class="home-bg bar_shade" percent="88" style="width: 88%;"></span>
+            <span class="away-bg bar_shade" percent="12" style="width: 12%;"></span>
+        </div>
+    </li>
+
+    <li class="kind">Record</li>
+
+    <li>
+        <div class="fx-tb-title">
+            <span></span>
+            <span>All</span>
+            <span></span>
+        </div>
+        <div class="detail f-l">1W 4D 5L</div>
+        <div class="fx-td-data">
+            <div class="home-bg bar_shade" percent="87.5" style="width: 87.5%;"></div>
+        </div>
+        <div class="fx-td-data guest">
+            <div class="away-bg bar_shade" percent="12.5" style="width: 12.5%;"></div>
+        </div>
+        <div class="detail f-r">0W 1D 9L</div>
+    </li>
+</ul>
+        </div>
+    </div>
+    <div class="survey" id="survey">
+        <div class="tips">* The above data is for reference only and is generated from recent competition statistics</div>
+        <div class="supportbtn">
+            <span class="icon iconfont icon-font-small-support-off1 good win-f" onclick="doSurvey(1)"></span>
+            <span class="icon iconfont icon-font-small-support-off1 bad lose-f" onclick="doSurvey(3)"></span>
+        </div>
+    </div>
+</div>
+
+<script type="text/template" id="barCompareKind">
+    <li class="kind">{$Kind}</li>
+</script>
+
+<script type="text/template" id="barCompareTit">
+    <li>
+        <div class="fx-tb-title title">
+            <span class="team-home-f">{$HomePercent}%</span>
+            <span>{$Title}</span>
+            <span class="team-away-f">{$GuestPercent}%</span>
+        </div>
+        <div class="team-h1">
+            <span class="home-bg bar_shade" percent="{$HomePercent}"></span>
+            <span class="away-bg bar_shade" percent="{$GuestPercent}"></span>
+        </div>
+    </li>
+</script>
+
+<script type="text/template" id="barCompareItem">
+    <li>
+        <div class="fx-tb-title">
+            <span></span>
+            <span>{$Title}</span>
+            <span></span>
+        </div>
+        <div class="detail f-l">{$HomeDetail}</div>
+        <div class="fx-td-data">
+            <div class="home-bg bar_shade" percent="{$HomePercent}"></div>
+        </div>
+        <div class="fx-td-data guest">
+            <div class="away-bg bar_shade" percent="{$GuestPercent}"></div>
+        </div>
+        <div class="detail f-r">{$GuestDetail}</div>
+    </li>
+</script>
+
+<script>
+    var battleData = "".split("|");
+    var lastMatchData = "1,0,1,1,3,11,27,-1,0,6#0,0,1,3,2,17,54,-1,0,3|0,1,2,2,2,12,45,-1,1,4#1,0,2,2,5,15,46,-1,1,4|0,2,2,1,2,0,22,-1,2,10#1,0,0,4,1,0,50,-1,1,2|0,1,1,18,2,0,64,-1,8,2#1,0,1,0,2,0,0,-1,0,0|1,0,3,10,3,0,55,-1,4,8#0,0,1,4,0,0,45,-1,0,1|1,2,2,2,2,0,35,-1,3,5#0,0,1,1,1,0,43,-1,2,4|0,1,0,6,1,0,38,-1,2,2#0,0,3,1,3,0,24,-1,0,7|0,0,5,3,1,0,0,-1,0,6#1,0,2,2,1,0,38,-1,0,8|1,2,2,4,0,0,58,-1,6,11#1,0,3,0,0,0,25,-1,0,13|1,0,7,0,0,0,0,-1,0,0#1,0,6,0,1,0,28,-1,0,17".split("|");
+    var marketData = "0,0".split(",");
+    var survayData = "9,1".split(",");
+</script>
+
+<script src="/scripts/soccer/strength?v=YEZCvOUq7wZPMjrwurkw0XK6k8k6nQoHf9SDOyI83VA1"></script>
+
+            </div><div id="porletAd2" class="ad_l3">
+            <script language="javascript" type="text/javascript">getAnList("l3");</script>
+        </div><div class="porletP" id="porletP2">
+                
+
+
+<h2 class="team-table-title">
+    Who will win?
+</h2>
+
+<div id="guessBox" class="fx guessingbox" style="">
+    
+        <i class="iconfont icon-rank rank" onclick="toRewardRule()"></i>
+    <div class="recordbox">
+        <img class="teamimg" src="//football.nowgoal25.com/image/team/images/1h4qpagh0m26.png" alt="Singapore U23">
+        <div class="record" id="">
+            <div class="vote guess" id="voteTxt">
+                <div id="homeBtnGuess" class="ext" onclick="guessVote(1)">Home<font id="homeOddsGuess" name="oddsData" data-o="1.02">1.02</font></div>
+                <div class="ext tit">AH:<font id="handicapGuess" data-o="0.25">0/0.5</font></div>
+                <div id="guestBtnGuess" class="ext" onclick="guessVote(2)">Away<font id="guestOddsGuess" name="oddsData" data-o="0.77">0.77</font></div>
+            </div>
+            <div class="vote" id="voteTxt">
+                <div class="ext win-f" id="homeVoteNum">0%<text>(0)</text></div>
+                <div class="ext" id="voteContent" style="display: none;">
+See the results after voting. Votes:<font id="voteNum"></font>
+
+                </div>
+                <div class="ext lose-f" id="guestVoteNum"><text>(0)</text>0%</div>
+            </div>
+            <div class="vote-bar o-draw" id="voteBar">
+                <i id="hbar" class="barH o-win" style="width: 50%;"></i>
+                <i id="gbar" class="barG o-lose" style="width: 50%;"></i>
+            </div>
+        </div>
+        <img class="teamimg" src="//football.nowgoal25.com/image/team/images/1h59q4xy9m29.png" alt="Bangladesh U23">
+    </div>
+</div>
+
+
+<script>
+    const _userUrl = "//user.nowgoal25.com"
+    const _tipsUrl = "https://tips.nowgoal25.com"
+</script>
+
+<script src="/scripts/soccer/guess?v=aH82EPJbp6WwcJIgNBi_FopVd6FK58CeOYcRW7hOiqw1"></script>
+
+            </div><div id="porletAd3" class="ad_l4">
+            <script language="javascript" type="text/javascript">getAnList("l4");</script>
+        </div><div class="porletP" id="porletP4">
+            
+<div>
+    <h2 class="team-table-title">Cup Standings</h2>
+    <div class="team-div">
+        <table width="100%" border="0" align="center" cellpadding="0" cellspacing="1" class="team-table-other">
+            <tbody><tr align="center" class="teaminfo_td">
+                <th width="9%">Rank</th>
+                <th width="15%">Teams</th>
+                <th width="9%">Matches</th>
+                <th width="9%">Win</th>
+                <th width="9%">Draw</th>
+                <th width="9%">Loss</th>
+                <th width="9%">Scored</th>
+                <th width="9%">Conceded</th>
+                <th width="11%">Pts</th>
+            </tr>
+            <tr align="middle">
+<td>1</td>
+<td><a href="javascript:openFbTeam(5190)"><span class="green">Vietnam U23</span></a></td>
+<td>2</td>
+<td>2</td>
+<td>0</td>
+<td>0</td>
+<td>3</td>
+<td>0</td>
+<td>6</td>
+</tr><tr align="middle">
+<td>2</td>
+<td><a href="javascript:openFbTeam(5197)"><span class="green">Yemen U23</span></a></td>
+<td>2</td>
+<td>2</td>
+<td>0</td>
+<td>0</td>
+<td>3</td>
+<td>1</td>
+<td>6</td>
+</tr><tr align="middle" class="agaT">
+<td>3</td>
+<td><a href="javascript:openFbTeam(5144)"><span class="green">Singapore U23</span></a></td>
+<td>2</td>
+<td>0</td>
+<td>0</td>
+<td>2</td>
+<td>1</td>
+<td>3</td>
+<td>0</td>
+</tr><tr align="middle" class="agaT">
+<td>4</td>
+<td><a href="javascript:openFbTeam(5126)"><span class="green">Bangladesh U23</span></a></td>
+<td>2</td>
+<td>0</td>
+<td>0</td>
+<td>2</td>
+<td>0</td>
+<td>3</td>
+<td>0</td>
+</tr>
+        </tbody></table>
+    </div>
+</div>
+
+            
+
+
+        </div><div id="porletAd5" class="ad_l6">
+            <script language="javascript" type="text/javascript">getAnList("l6");</script>
+        </div><div class="porletP" id="porletP6">
+            
+<div>
+        <h2 class="team-table-title">Previous Scores Statistics</h2>
+    <table id="table_v1" width="100%" border="0" align="center" cellpadding="0" cellspacing="0" class="team-table-home">
+        <tbody>
+            <tr align="center" class="team-home">
+                <td colspan="16">
+                        <a onclick="javascript:openFbTeam(5144)" style="cursor:pointer">Singapore U23</a>
+                    &nbsp;
+                    <input onclick="initMatchListShow(1,1)" type="checkbox" id="cb_sos1"><label style="cursor:pointer" for="cb_sos1">Home</label>&nbsp;&nbsp;
+                    <input onclick="initMatchListShow(1,2)" type="checkbox" id="checkboxleague1" value="1385" name="checkboxleague1">
+                    <label style="cursor: pointer" for="checkboxleague1">Same League</label>
+                    &nbsp;&nbsp;
+                    <input onclick="showOdds_all(1,3)" type="checkbox" id="ftType_1"><label style="cursor:pointer" for="ftType_1">HT</label>&nbsp;&nbsp;
+                    <select id="selectMatchCount1" class="countSelect" onchange="initMatchListShow(1,3)">
+                            <option value="1">Last 1</option>
+                            <option value="2" selected="'selected'">Last 2</option>
+                            <option value="3">Last 3</option>
+                            <option value="4">Last 4</option>
+                            <option value="5">Last 5</option>
+                            <option value="6">Last 6</option>
+                            <option value="7">Last 7</option>
+                            <option value="8">Last 8</option>
+                            <option value="9">Last 9</option>
+                            <option value="10">Last 10</option>
+                            <option value="11">Last 11</option>
+                            <option value="12">Last 12</option>
+                            <option value="13">Last 13</option>
+                            <option value="14">Last 14</option>
+                            <option value="15">Last 15</option>
+                            <option value="16">Last 16</option>
+                            <option value="17">Last 17</option>
+                            <option value="18">Last 18</option>
+                            <option value="19">Last 19</option>
+                            <option value="20">Last 20</option>
+                    </select>
+                </td>
+            </tr>
+
+            <tr name="vsBarTr">
+                <td colspan="16">
+                    
+
+                    <div class="x-bar" style="">
+                        <div class="tit">
+                            <span class="win-f left">
+                                Win <span id="hW_v1">1 (10%)</span>
+                            </span>
+                            <span class="draw-f">
+                                Draw <span id="d_v1">4 (40%)</span>
+                            </span>
+                            <span class="lose-f right">
+                                Loss <span id="gW_v1">5 (50%)</span>
+                            </span>
+                        </div>
+                        <div class="bar">
+                            <span style="width: 10%;" class="o-win left" id="hWBar_v1"></span>
+                            <span class="o-draw" id="dBar_v1"></span>
+                            <span style="width: 50%;" class="o-lose right" id="gWBar_v1"></span>
+                        </div>
+                    </div>
+                    <div class="x-bar" style="">
+                        <div class="tit">
+                            <span class="win-f left">
+                                <span id="hsAvg_v1">0.9 goals</span>
+                            </span>
+                            <span class="explain">
+                                Goals Scored/Conceded per Game
+                            </span>
+                            <span class="lose-f right">
+                                <span id="gsAvg_v1">2.5 goals</span>
+                            </span>
+                        </div>
+                        <div class="bar">
+                            <span class="o-win left" id="hsAvgRate_v1" style="width: 26%;"></span>
+                            <span class="o-lose right" id="gsAvgRate_v1" style="width: 74%;"></span>
+                        </div>
+                    </div>
+
+                    <ul class="y-bar" style="">
+                        <li class="group">
+                            <div class="tit">Asian Handicap Odds <span id="ahCount_v1">(9 games)</span></div>
+                            <div class="bars">
+                                <div class="item">
+                                    <div class="o-win bar" id="ahWBar_v1" style="height: 44%;">
+                                        <span class="value win-f">44%</span>
+                                        <span class="txt">Home</span>
+                                    </div>
+                                </div>
+                                <div class="item">
+                                    <div class="o-draw bar" id="ahDBar_v1" style="height: 0%;">
+                                        <span class="value draw-f">0%</span>
+                                        <span class="txt">Draw</span>
+
+                                    </div>
+                                </div>
+                                <div class="item">
+                                    <div class="o-lose bar" id="ahLBar_v1" style="height: 56%;">
+                                        <span class="value lose-f">56%</span>
+                                        <span class="txt">Away</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="group">
+                            <div class="tit">Over/Under Odds <span id="ouCount_v1">(9 games)</span></div>
+                            <div class="bars">
+                                <div class="item">
+                                    <div class="o-win bar" id="ouWBar_v1" style="height: 56%;">
+                                        <span class="value win-f">56%</span>
+                                        <span class="txt">Over</span>
+                                    </div>
+                                </div>
+                                <div class="item">
+                                    <div class="o-draw bar" id="ouDBar_v1" style="height: 11%;">
+                                        <span class="value draw-f">11%</span>
+                                        <span class="txt">Draw</span>
+
+                                    </div>
+                                </div>
+                                <div class="item">
+                                    <div class="o-lose bar" id="ouLBar_v1" style="height: 33%;">
+                                        <span class="value lose-f">33%</span>
+                                        <span class="txt">Under</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </td>
+            </tr>
+
+            <tr align="center" name="vsHeadTr">
+                <th width="70" rowspan="2">League/Cup</th>
+                <th width="60" rowspan="2">Date </th>
+                <th width="120" rowspan="2">Home</th>
+                <th width="55" rowspan="2" id="FScore_1">Score </th>
+                <th width="120" rowspan="2">Away </th>
+                <th width="55" rowspan="2" id="FCorner_1">Corner </th>
+                <th width="144px" colspan="4" class="ll no-b-l">    <select onchange="showOdds_s(1,1);" id="sSelect_1">
+            <option value="281">Bet365</option>
+            <option value="474">Sbobet</option>
+            <option value="18">12Bet</option>
+            <option value="545">Crown</option>
+            <option value="0">1x2</option>
+            <option value="90">Easybet </option>
+            <option value="115">William Hill</option>
+            <option value="80">Macauslot</option>
+            <option value="82">Ladbrokes</option>
+    </select>
+ &nbsp;    <select onchange="showOdds_s(1,2);" id="sType_1">
+            <option value="0">First</option>
+            <option value="1">Final</option>
+    </select>
+ </th>
+                <th width="144px" colspan="4" class="ll no-b-l">    <select onchange="showOdds_h(1,1);" id="hSelect_1">
+            <option value="8">Bet365</option>
+            <option value="31">Sbobet</option>
+            <option value="24">12bet</option>
+            <option value="3">Crown</option>
+            <option value="12">Easybets</option>
+    </select>
+ &nbsp;    <select onchange="showOdds_h(1,2);" id="hType_1">
+            <option value="0">First</option>
+            <option value="1">Final</option>
+    </select>
+ </th>
+                <th width="35" class="rl ll" rowspan="2">O/U</th>
+            </tr>
+            <tr align="center" name="vsHeadTr" ahpanlu="" oupanlu="">
+                <th width="35" class="ll">HW</th>
+                <th width="35">D</th>
+                <th width="35">AW</th>
+                <th width="35">W/L</th>
+                <th width="35" class="ll">H</th>
+                <th width="35">AH</th>
+                <th width="35">A</th>
+                <th width="35">AH</th>
+            </tr>
+                <tr id="tr1_1" align="center" style="" vs="1" name="1385" index="2789588" info="0,1,5144,0,0" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2025-09-06 12:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2025,9-1,06,12,00,00', 3)</script>06-09-2025
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2789588, 'Singapore U23', 'Vietnam U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">0-1</span><span class="hscore_1">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5190)"><span class="">Vietnam U23</span></a></td>
+                    <td><span class="fcorner_1">1-7</span><span class="hcorner_1">(0-1)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.00" data-e="1">6.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="5.00" data-e="1">5.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.33" data-e="1">1.33</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.90">0.90</td>
+                    <td data-o="-1.5">-1.5</td>
+                    <td data-o="0.90">0.90</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr1_2" align="center" style="" vs="0" name="1385" index="2789560" info="2,1,5197,2,0" ahpanlu="0" oupanlu="1">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2025-09-03 09:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2025,9-1,03,09,00,00', 3)</script>03-09-2025
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5197)"><span class="">Yemen U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2789560, 'Yemen U23', 'Singapore U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">2-1</span><span class="hscore_1">(2-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td><span class="fcorner_1">4-2</span><span class="hcorner_1">(4-0)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.73" data-e="1">1.73</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.80" data-e="1">3.80</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.60" data-e="1">3.60</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.98">0.98</td>
+                    <td data-o="0.5/1">0.5/1</td>
+                    <td data-o="0.83">0.83</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-draw">D</span></td>
+                </tr>
+                <tr id="tr1_3" align="center" style="" vs="0" name="1385" index="2466310" info="2,2,5190,1,0" ahpanlu="2" oupanlu="2">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2023-09-12 12:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2023,9-1,12,12,00,00', 3)</script>12-09-2023
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5190)"><span class="">Vietnam U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2466310, 'Vietnam U23', 'Singapore U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">2-2</span><span class="hscore_1">(1-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td><span class="fcorner_1">11-1</span><span class="hcorner_1">(1-0)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.10" data-e="1">1.10</td>
+                    <td class="hbg-td1" name="oddsData" data-o="11.00" data-e="1">11.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="13.00" data-e="1">13.00</td>
+                    <td class="hbg-td1"><span class="o-draw">D</span></td>
+                    <td data-o="0.70">0.70</td>
+                    <td data-o="2/2.5">2/2.5</td>
+                    <td data-o="1.10">1.10</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+                <tr id="tr1_4" align="center" style="" vs="0" name="1385" index="2466285" info="1,1,67048,0,0" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2023-09-09 09:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2023,9-1,09,09,00,00', 3)</script>09-09-2023
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(67048)"><span class="">Guam U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2466285, 'Guam U23', 'Singapore U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">1-1</span><span class="hscore_1">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td><span class="fcorner_1">4-18</span><span class="hcorner_1">(4-11)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="29.00" data-e="1">29.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="11.00" data-e="1">11.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.06" data-e="1">1.06</td>
+                    <td class="hbg-td1"><span class="o-draw">D</span></td>
+                    <td data-o="1.10">1.10</td>
+                    <td data-o="-3">-3</td>
+                    <td data-o="0.70">0.70</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr1_5" align="center" style="" vs="1" name="1385" index="2466264" info="0,3,5144,0,3" ahpanlu="0" oupanlu="2">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2023-09-06 09:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2023,9-1,06,09,00,00', 3)</script>06-09-2023
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2466264, 'Singapore U23', 'Yemen U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">0-3</span><span class="hscore_1">(0-3)</span></td>
+                    <td><a onclick="soccerDbPage.team(5197)"><span class="">Yemen U23</span></a></td>
+                    <td><span class="fcorner_1">10-2</span><span class="hcorner_1">(2-2)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.50" data-e="1">6.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.00" data-e="1">4.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.45" data-e="1">1.45</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="1.05">1.05</td>
+                    <td data-o="-1">-1</td>
+                    <td data-o="0.75">0.75</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+                <tr id="tr1_6" align="center" style="" vs="1" name="293" index="2195134" info="2,2,5144,1,1" ahpanlu="2" oupanlu="2">
+                    <td height="25" title="Southeast Asian Games">SEAG                          </td>
+                    <td>
+                            <span name="timeData" data-t="2022-05-14 09:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2022,5-1,14,09,00,00', 3)</script>14-05-2022
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2195134, 'Singapore U23', 'Malaysia U23', 'Southeast Asian Games')"><span class="fscore_1 red2">2-2</span><span class="hscore_1">(1-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(5189)"><span class="">Malaysia U23</span></a></td>
+                    <td><span class="fcorner_1">2-5</span><span class="hcorner_1">(0-3)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.50" data-e="1">6.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.75" data-e="1">4.75</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.33" data-e="1">1.33</td>
+                    <td class="hbg-td1"><span class="o-draw">D</span></td>
+                    <td data-o="0.78">0.78</td>
+                    <td data-o="-1.5">-1.5</td>
+                    <td data-o="1.03">1.03</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+                <tr id="tr1_7" align="center" style="" vs="0" name="293" index="2195131" info="0,1,7111,0,1" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="Southeast Asian Games">SEAG                          </td>
+                    <td>
+                            <span name="timeData" data-t="2022-05-11 09:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2022,5-1,11,09,00,00', 3)</script>11-05-2022
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(7111)"><span class="">Cambodia U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2195131, 'Cambodia U23', 'Singapore U23', 'Southeast Asian Games')"><span class="fscore_1 red2">0-1</span><span class="hscore_1">(0-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td><span class="fcorner_1">15-6</span><span class="hcorner_1">(7-3)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="2.50" data-e="1">2.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.60" data-e="1">3.60</td>
+                    <td class="hbg-td1" name="oddsData" data-o="2.30" data-e="1">2.30</td>
+                    <td class="hbg-td1"><span class="o-win">W</span></td>
+                    <td data-o="0.93">0.93</td>
+                    <td data-o="0">0</td>
+                    <td data-o="0.88">0.88</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr1_8" align="center" style="" vs="0" name="293" index="2195130" info="5,0,5198,1,0" ahpanlu="0" oupanlu="2">
+                    <td height="25" title="Southeast Asian Games">SEAG                          </td>
+                    <td>
+                            <span name="timeData" data-t="2022-05-09 12:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2022,5-1,09,12,00,00', 3)</script>09-05-2022
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5198)"><span class="">Thailand U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2195130, 'Thailand U23', 'Singapore U23', 'Southeast Asian Games')"><span class="fscore_1 red2">5-0</span><span class="hscore_1">(1-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td><span class="fcorner_1">4-3</span><span class="hcorner_1">(3-3)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.20" data-e="1">1.20</td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.00" data-e="1">6.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="10.00" data-e="1">10.00</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.83">0.83</td>
+                    <td data-o="1.5/2">1.5/2</td>
+                    <td data-o="0.98">0.98</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+                <tr id="tr1_9" align="center" style="" vs="1" name="293" index="2195127" info="2,2,5144,0,1" ahpanlu="0" oupanlu="2">
+                    <td height="25" title="Southeast Asian Games">SEAG                          </td>
+                    <td>
+                            <span name="timeData" data-t="2022-05-07 09:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2022,5-1,07,09,00,00', 3)</script>07-05-2022
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2195127, 'Singapore U23', 'Laos U23', 'Southeast Asian Games')"><span class="fscore_1 red2">2-2</span><span class="hscore_1">(0-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(7110)"><span class="">Laos U23</span></a></td>
+                    <td><span class="fcorner_1">4-7</span><span class="hcorner_1">(2-3)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.62" data-e="1">1.62</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.60" data-e="1">3.60</td>
+                    <td class="hbg-td1" name="oddsData" data-o="5.00" data-e="1">5.00</td>
+                    <td class="hbg-td1"><span class="o-draw">D</span></td>
+                    <td data-o="0.80">0.80</td>
+                    <td data-o="0.5/1">0.5/1</td>
+                    <td data-o="1.00">1.00</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+                <tr id="tr1_10" align="center" style="" vs="1" name="2319" index="2157626" info="0,7,5144,0,3" ahpanlu="" oupanlu="">
+                    <td height="25" title="AFF U23 Championship">AFF C U23                     </td>
+                    <td>
+                            <span name="timeData" data-t="2022-02-19 12:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2022,2-1,19,12,00,00', 3)</script>19-02-2022
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2157626, 'Singapore U23', 'Vietnam U23', 'AFF U23 Championship')"><span class="fscore_1 red2">0-7</span><span class="hscore_1">(0-3)</span></td>
+                    <td><a onclick="soccerDbPage.team(5190)"><span class="">Vietnam U23</span></a></td>
+                    <td><span class="fcorner_1">-</span><span class="hcorner_1"></span></td>
+                    <td class="hbg-td1" name="oddsData"></td>
+                    <td class="hbg-td1" name="oddsData"></td>
+                    <td class="hbg-td1" name="oddsData"></td>
+                    <td class="hbg-td1">                <span class="o-lose">L</span>
+</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr id="tr1_11" align="center" style="display:none;" vs="0" name="2319" index="2157625" info="3,1,5198,1,1" ahpanlu="" oupanlu="">
+                    <td height="25" title="AFF U23 Championship">AFF C U23                     </td>
+                    <td>
+                            <span name="timeData" data-t="2022-02-16 12:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2022,2-1,16,12,00,00', 3)</script>16-02-2022
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5198)"><span class="">Thailand U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2157625, 'Thailand U23', 'Singapore U23', 'AFF U23 Championship')"><span class="fscore_1 red2">3-1</span><span class="hscore_1">(1-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td><span class="fcorner_1">-</span><span class="hcorner_1"></span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.22" data-e="1">1.22</td>
+                    <td class="hbg-td1" name="oddsData" data-o="5.50" data-e="1">5.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="9.00" data-e="1">9.00</td>
+                    <td class="hbg-td1"><span class="o-lose">L </span> </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr id="tr1_12" align="center" style="display:none;" vs="0" name="1385" index="2113638" info="5,1,5196,4,0" ahpanlu="0" oupanlu="2">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2021-10-31 12:30:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2021,10-1,31,12,30,00', 3)</script>31-10-2021
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5196)"><span class="">South Korea U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2113638, 'South Korea U23', 'Singapore U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">5-1</span><span class="hscore_1">(4-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td><span class="fcorner_1">11-0</span><span class="hcorner_1">(5-0)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.20" data-e="1">1.20</td>
+                    <td class="hbg-td1" name="oddsData" data-o="5.50" data-e="1">5.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="10.00" data-e="1">10.00</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.90">0.90</td>
+                    <td data-o="2/2.5">2/2.5</td>
+                    <td data-o="0.90">0.90</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+                <tr id="tr1_13" align="center" style="display:none;" vs="0" name="1385" index="2113636" info="0,1,18480,0,0" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2021-10-28 12:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2021,10-1,28,12,00,00', 3)</script>28-10-2021
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(18480)"><span class="">Philippines U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2113636, 'Philippines U23', 'Singapore U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">0-1</span><span class="hscore_1">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td><span class="fcorner_1">1-9</span><span class="hcorner_1">(0-7)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.70" data-e="1">1.70</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.00" data-e="1">4.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.60" data-e="1">3.60</td>
+                    <td class="hbg-td1"><span class="o-win">W</span></td>
+                    <td data-o="0.80">0.80</td>
+                    <td data-o="0.5">0.5</td>
+                    <td data-o="1.00">1.00</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr1_14" align="center" style="display:none;" vs="1" name="1385" index="2113634" info="2,2,5144,1,2" ahpanlu="0" oupanlu="2">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2021-10-25 12:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2021,10-1,25,12,00,00', 3)</script>25-10-2021
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2113634, 'Singapore U23', 'Timor Leste U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">2-2</span><span class="hscore_1">(1-2)</span></td>
+                    <td><a onclick="soccerDbPage.team(12496)"><span class="">Timor Leste U23</span></a></td>
+                    <td><span class="fcorner_1">13-2</span><span class="hcorner_1">(6-2)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.17" data-e="1">1.17</td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.50" data-e="1">6.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="10.00" data-e="1">10.00</td>
+                    <td class="hbg-td1"><span class="o-draw">D</span></td>
+                    <td data-o="0.78">0.78</td>
+                    <td data-o="2">2</td>
+                    <td data-o="1.03">1.03</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+                <tr id="tr1_15" align="center" style="display:none;" vs="1" name="1366" index="1804923" info="0,3,5144,0,1" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="International Friendly">INT FRL                       </td>
+                    <td>
+                            <span name="timeData" data-t="2019-10-09 11:45:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,10-1,09,11,45,00', 3)</script>09-10-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1804923, 'Singapore U23', 'United Arab Emirates U23', 'International Friendly')"><span class="fscore_1 red2">0-3</span><span class="hscore_1">(0-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(5201)"><span class="">United Arab Emirates U23</span></a></td>
+                    <td><span class="fcorner_1">2-8</span><span class="hcorner_1">(1-5)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.50" data-e="1">6.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.00" data-e="1">4.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.40" data-e="1">1.40</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="1.10">1.10</td>
+                    <td data-o="-1">-1</td>
+                    <td data-o="0.70">0.70</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr1_16" align="center" style="display:none;" vs="0" name="1385" index="1687723" info="1,3,24433,1,2" ahpanlu="2" oupanlu="2">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2019-03-26 09:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,3-1,26,09,00,00', 3)</script>26-03-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(24433)"><span class="">Mongolia U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1687723, 'Mongolia U23', 'Singapore U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">1-3</span><span class="hscore_1">(1-2)</span></td>
+                    <td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td><span class="fcorner_1">4-3</span><span class="hcorner_1">(0-1)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="2.80" data-e="1">2.80</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.50" data-e="1">3.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="2.10" data-e="1">2.10</td>
+                    <td class="hbg-td1"><span class="o-win">W</span></td>
+                    <td data-o="0.85">0.85</td>
+                    <td data-o="0/-0.5">0/-0.5</td>
+                    <td data-o="0.95">0.95</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+                <tr id="tr1_17" align="center" style="display:none;" vs="1" name="1385" index="1687720" info="1,1,5144,1,1" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2019-03-24 05:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,3-1,24,05,00,00', 3)</script>24-03-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1687720, 'Singapore U23', 'North Korea U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">1-1</span><span class="hscore_1">(1-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(5199)"><span class="">North Korea U23</span></a></td>
+                    <td><span class="fcorner_1">0-5</span><span class="hcorner_1">(0-1)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="7.50" data-e="1">7.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="5.00" data-e="1">5.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.28" data-e="1">1.28</td>
+                    <td class="hbg-td1"><span class="o-draw">D</span></td>
+                    <td data-o="0.95">0.95</td>
+                    <td data-o="-1.5">-1.5</td>
+                    <td data-o="0.85">0.85</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr1_18" align="center" style="display:none;" vs="0" name="1385" index="1687718" info="1,1,19551,0,0" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2019-03-22 05:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,3-1,22,05,00,00', 3)</script>22-03-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(19551)"><span class="">Hong Kong U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1687718, 'Hong Kong U23', 'Singapore U23', 'AFC U23 Asian Cup')"><span class="fscore_1 red2">1-1</span><span class="hscore_1">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td><span class="fcorner_1">0-3</span><span class="hcorner_1">(0-1)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.61" data-e="1">1.61</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.00" data-e="1">4.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.00" data-e="1">4.00</td>
+                    <td class="hbg-td1"><span class="o-draw">D</span></td>
+                    <td data-o="0.80">0.80</td>
+                    <td data-o="0.5/1">0.5/1</td>
+                    <td data-o="1.00">1.00</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr1_19" align="center" style="display:none;" vs="1" name="1366" index="1555372" info="0,2,5144,0,1" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="International Friendly">INT FRL                       </td>
+                    <td>
+                            <span name="timeData" data-t="2018-06-20 12:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2018,6-1,20,12,00,00', 3)</script>20-06-2018
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1555372, 'Singapore U23', 'Myanmar U23', 'International Friendly')"><span class="fscore_1 red2">0-2</span><span class="hscore_1">(0-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(7112)"><span class="">Myanmar U23</span></a></td>
+                    <td><span class="fcorner_1">4-6</span><span class="hcorner_1">(1-3)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.10" data-e="1">3.10</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.75" data-e="1">3.75</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.90" data-e="1">1.90</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="1.02">1.02</td>
+                    <td data-o="0/-0.5">0/-0.5</td>
+                    <td data-o="0.78">0.78</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr1_20" align="center" style="display:none;" vs="1" name="1366" index="1521781" info="0,3,5144,0,1" ahpanlu="0" oupanlu="2">
+                    <td height="25" title="International Friendly">INT FRL                       </td>
+                    <td>
+                            <span name="timeData" data-t="2018-03-21 11:30:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2018,3-1,21,11,30,00', 3)</script>21-03-2018
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5144)"><span class="team-home-f">Singapore U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1521781, 'Singapore U23', 'Indonesia U23', 'International Friendly')"><span class="fscore_1 red2">0-3</span><span class="hscore_1">(0-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(5187)"><span class="">Indonesia U23</span></a></td>
+                    <td><span class="fcorner_1">2-10</span><span class="hcorner_1">(1-7)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="5.00" data-e="1">5.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.00" data-e="1">4.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.50" data-e="1">1.50</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.90">0.90</td>
+                    <td data-o="-1">-1</td>
+                    <td data-o="0.90">0.90</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+            <tr name="nodataTr" style="display:none;">
+                <td colspan="16" style="line-height:70px;font-weight:bold;">No Data!</td>
+            </tr>
+</tbody></table>
+</div>
+
+
+            
+<div>
+    <table id="table_v2" width="100%" border="0" align="center" cellpadding="0" cellspacing="0" class="team-table-guest">
+        <tbody>
+            <tr align="center" class="team-guest">
+                <td colspan="16">
+                        <a onclick="javascript:openFbTeam(5126)" style="cursor:pointer">Bangladesh U23</a>
+                    &nbsp;
+                    <input onclick="initMatchListShow(2,1)" type="checkbox" id="cb_sos2"><label style="cursor:pointer" for="cb_sos2">Away</label>&nbsp;&nbsp;
+                    <input onclick="initMatchListShow(2,2)" type="checkbox" id="checkboxleague2" value="1385" name="checkboxleague2">
+                    <label style="cursor: pointer" for="checkboxleague2">Same League</label>
+                    &nbsp;&nbsp;
+                    <input onclick="showOdds_all(2,3)" type="checkbox" id="ftType_2"><label style="cursor:pointer" for="ftType_2">HT</label>&nbsp;&nbsp;
+                    <select id="selectMatchCount2" class="countSelect" onchange="initMatchListShow(2,3)">
+                            <option value="1">Last 1</option>
+                            <option value="2" selected="'selected'">Last 2</option>
+                            <option value="3">Last 3</option>
+                            <option value="4">Last 4</option>
+                            <option value="5">Last 5</option>
+                            <option value="6">Last 6</option>
+                            <option value="7">Last 7</option>
+                            <option value="8">Last 8</option>
+                            <option value="9">Last 9</option>
+                            <option value="10">Last 10</option>
+                            <option value="11">Last 11</option>
+                            <option value="12">Last 12</option>
+                            <option value="13">Last 13</option>
+                            <option value="14">Last 14</option>
+                            <option value="15">Last 15</option>
+                            <option value="16">Last 16</option>
+                            <option value="17">Last 17</option>
+                            <option value="18">Last 18</option>
+                            <option value="19">Last 19</option>
+                            <option value="20">Last 20</option>
+                    </select>
+                </td>
+            </tr>
+
+            <tr name="vsBarTr">
+                <td colspan="16">
+                    
+
+                    <div class="x-bar" style="">
+                        <div class="tit">
+                            <span class="win-f left">
+                                Win <span id="hW_v2">0 (0%)</span>
+                            </span>
+                            <span class="draw-f">
+                                Draw <span id="d_v2">1 (10%)</span>
+                            </span>
+                            <span class="lose-f right">
+                                Loss <span id="gW_v2">9 (90%)</span>
+                            </span>
+                        </div>
+                        <div class="bar">
+                            <span style="width: 0%;" class="o-win left" id="hWBar_v2"></span>
+                            <span class="o-draw" id="dBar_v2"></span>
+                            <span style="width: 90%;" class="o-lose right" id="gWBar_v2"></span>
+                        </div>
+                    </div>
+                    <div class="x-bar" style="">
+                        <div class="tit">
+                            <span class="win-f left">
+                                <span id="hsAvg_v2">0 goals</span>
+                            </span>
+                            <span class="explain">
+                                Goals Scored/Conceded per Game
+                            </span>
+                            <span class="lose-f right">
+                                <span id="gsAvg_v2">2 goals</span>
+                            </span>
+                        </div>
+                        <div class="bar">
+                            <span class="o-win left" id="hsAvgRate_v2" style="width: 0%;"></span>
+                            <span class="o-lose right" id="gsAvgRate_v2" style="width: 100%;"></span>
+                        </div>
+                    </div>
+
+                    <ul class="y-bar" style="">
+                        <li class="group">
+                            <div class="tit">Asian Handicap Odds <span id="ahCount_v2">(9 games)</span></div>
+                            <div class="bars">
+                                <div class="item">
+                                    <div class="o-win bar" id="ahWBar_v2" style="height: 11%;">
+                                        <span class="value win-f">11%</span>
+                                        <span class="txt">Home</span>
+                                    </div>
+                                </div>
+                                <div class="item">
+                                    <div class="o-draw bar" id="ahDBar_v2" style="height: 11%;">
+                                        <span class="value draw-f">11%</span>
+                                        <span class="txt">Draw</span>
+
+                                    </div>
+                                </div>
+                                <div class="item">
+                                    <div class="o-lose bar" id="ahLBar_v2" style="height: 78%;">
+                                        <span class="value lose-f">78%</span>
+                                        <span class="txt">Away</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="group">
+                            <div class="tit">Over/Under Odds <span id="ouCount_v2">(9 games)</span></div>
+                            <div class="bars">
+                                <div class="item">
+                                    <div class="o-win bar" id="ouWBar_v2" style="height: 11%;">
+                                        <span class="value win-f">11%</span>
+                                        <span class="txt">Over</span>
+                                    </div>
+                                </div>
+                                <div class="item">
+                                    <div class="o-draw bar" id="ouDBar_v2" style="height: 0%;">
+                                        <span class="value draw-f">0%</span>
+                                        <span class="txt">Draw</span>
+
+                                    </div>
+                                </div>
+                                <div class="item">
+                                    <div class="o-lose bar" id="ouLBar_v2" style="height: 89%;">
+                                        <span class="value lose-f">89%</span>
+                                        <span class="txt">Under</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </td>
+            </tr>
+
+            <tr align="center" name="vsHeadTr">
+                <th width="70" rowspan="2">League/Cup</th>
+                <th width="60" rowspan="2">Date </th>
+                <th width="120" rowspan="2">Home</th>
+                <th width="55" rowspan="2" id="FScore_2">Score </th>
+                <th width="120" rowspan="2">Away </th>
+                <th width="55" rowspan="2" id="FCorner_2">Corner </th>
+                <th width="144px" colspan="4" class="ll no-b-l">    <select onchange="showOdds_s(2,1);" id="sSelect_2">
+            <option value="281">Bet365</option>
+            <option value="474">Sbobet</option>
+            <option value="18">12Bet</option>
+            <option value="545">Crown</option>
+            <option value="0">1x2</option>
+            <option value="90">Easybet </option>
+            <option value="115">William Hill</option>
+            <option value="80">Macauslot</option>
+            <option value="82">Ladbrokes</option>
+    </select>
+ &nbsp;    <select onchange="showOdds_s(2,2);" id="sType_2">
+            <option value="0">First</option>
+            <option value="1">Final</option>
+    </select>
+ </th>
+                <th width="144px" colspan="4" class="ll no-b-l">    <select onchange="showOdds_h(2,1);" id="hSelect_2">
+            <option value="8">Bet365</option>
+            <option value="31">Sbobet</option>
+            <option value="24">12bet</option>
+            <option value="3">Crown</option>
+            <option value="12">Easybets</option>
+    </select>
+ &nbsp;    <select onchange="showOdds_h(2,2);" id="hType_2">
+            <option value="0">First</option>
+            <option value="1">Final</option>
+    </select>
+ </th>
+                <th width="35" class="rl ll" rowspan="2">O/U</th>
+            </tr>
+            <tr align="center" name="vsHeadTr" ahpanlu="" oupanlu="">
+                <th width="35" class="ll">HW</th>
+                <th width="35">D</th>
+                <th width="35">AW</th>
+                <th width="35">W/L</th>
+                <th width="35" class="ll">H</th>
+                <th width="35">AH</th>
+                <th width="35">A</th>
+                <th width="35">AH</th>
+            </tr>
+                <tr id="tr2_1" align="center" style="" vs="0" name="1385" index="2789582" info="0,1,5126,0,0" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2025-09-06 09:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2025,9-1,06,09,00,00', 3)</script>06-09-2025
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2789582, 'Bangladesh U23', 'Yemen U23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">0-1</span><span class="hscore_2">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5197)"><span class="">Yemen U23</span></a></td>
+                    <td><span class="fcorner_2">3-7</span><span class="hcorner_2">(3-3)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.75" data-e="1">3.75</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.40" data-e="1">3.40</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.80" data-e="1">1.80</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.98">0.98</td>
+                    <td data-o="-0.5">-0.5</td>
+                    <td data-o="0.83">0.83</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_2" align="center" style="" vs="1" name="1385" index="2789566" info="2,0,5190,1,0" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2025-09-03 12:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2025,9-1,03,12,00,00', 3)</script>03-09-2025
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5190)"><span class="">Vietnam U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2789566, 'Vietnam U23', 'Bangladesh U23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">2-0</span><span class="hscore_2">(1-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td><span class="fcorner_2">12-2</span><span class="hcorner_2">(3-2)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.36" data-e="1">1.36</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.75" data-e="1">4.75</td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.00" data-e="1">6.00</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.95">0.95</td>
+                    <td data-o="1.5">1.5</td>
+                    <td data-o="0.85">0.85</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_3" align="center" style="" vs="1" name="401" index="2465974" info="0,0,4934,0,0" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="Asian Games">AGS                           </td>
+                    <td>
+                            <span name="timeData" data-t="2023-09-24 11:30:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2023,9-1,24,11,30,00', 3)</script>24-09-2023
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(4934)"><span class="">China U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2465974, 'China U23', 'Bangladesh U23', 'Asian Games')"><span class="fscore_2 red2">0-0</span><span class="hscore_2">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td><span class="fcorner_2">8-4</span><span class="hcorner_2">(4-4)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.02" data-e="1">1.02</td>
+                    <td class="hbg-td1" name="oddsData" data-o="17.00" data-e="1">17.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="34.00" data-e="1">34.00</td>
+                    <td class="hbg-td1"><span class="o-draw">D</span></td>
+                    <td data-o="0.90">0.90</td>
+                    <td data-o="4">4</td>
+                    <td data-o="0.90">0.90</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_4" align="center" style="" vs="1" name="401" index="2465972" info="1,0,5192,0,0" ahpanlu="" oupanlu="">
+                    <td height="25" title="Asian Games">AGS                           </td>
+                    <td>
+                            <span name="timeData" data-t="2023-09-21 08:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2023,9-1,21,08,00,00', 3)</script>21-09-2023
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5192)"><span class="">India U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2465972, 'India U23', 'Bangladesh U23', 'Asian Games')"><span class="fscore_2 red2">1-0</span><span class="hscore_2">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td><span class="fcorner_2">-</span><span class="hcorner_2"></span></td>
+                    <td class="hbg-td1" name="oddsData"></td>
+                    <td class="hbg-td1" name="oddsData"></td>
+                    <td class="hbg-td1" name="oddsData"></td>
+                    <td class="hbg-td1"><span class="o-lose">L </span> </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr id="tr2_5" align="center" style="" vs="0" name="401" index="2465970" info="0,1,5126,0,0" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="Asian Games">AGS                           </td>
+                    <td>
+                            <span name="timeData" data-t="2023-09-19 08:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2023,9-1,19,08,00,00', 3)</script>19-09-2023
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2465970, 'Bangladesh U23', 'Myanmar U23', 'Asian Games')"><span class="fscore_2 red2">0-1</span><span class="hscore_2">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(7112)"><span class="">Myanmar U23</span></a></td>
+                    <td><span class="fcorner_2">4-3</span><span class="hcorner_2">(1-1)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.75" data-e="1">3.75</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.25" data-e="1">3.25</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.85" data-e="1">1.85</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.90">0.90</td>
+                    <td data-o="-0.5">-0.5</td>
+                    <td data-o="0.90">0.90</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_6" align="center" style="" vs="0" name="1385" index="2466307" info="0,1,5126,0,0" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2023-09-12 09:30:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2023,9-1,12,09,30,00', 3)</script>12-09-2023
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2466307, 'Bangladesh U23', 'Philippines U23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">0-1</span><span class="hscore_2">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(18480)"><span class="">Philippines U23</span></a></td>
+                    <td><span class="fcorner_2">1-3</span><span class="hcorner_2">(0-1)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.83" data-e="1">1.83</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.50" data-e="1">3.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.60" data-e="1">3.60</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.88">0.88</td>
+                    <td data-o="0.5">0.5</td>
+                    <td data-o="0.93">0.93</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_7" align="center" style="" vs="0" name="1385" index="2466295" info="0,3,5126,0,2" ahpanlu="1" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2023-09-09 13:30:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2023,9-1,09,13,30,00', 3)</script>09-09-2023
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2466295, 'Bangladesh U23', 'Thailand U23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">0-3</span><span class="hscore_2">(0-2)</span></td>
+                    <td><a onclick="soccerDbPage.team(5198)"><span class="">Thailand U23</span></a></td>
+                    <td><span class="fcorner_2">1-7</span><span class="hcorner_2">(1-4)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="26.00" data-e="1">26.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="13.00" data-e="1">13.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.04" data-e="1">1.04</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.90">0.90</td>
+                    <td data-o="-3">-3</td>
+                    <td data-o="0.90">0.90</td>
+                    <td><span class="o-draw">D</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_8" align="center" style="" vs="1" name="1385" index="2466265" info="2,0,5189,0,0" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2023-09-06 09:30:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2023,9-1,06,09,30,00', 3)</script>06-09-2023
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5189)"><span class="">Malaysia U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2466265, 'Malaysia U23', 'Bangladesh U23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">2-0</span><span class="hscore_2">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td><span class="fcorner_2">11-2</span><span class="hcorner_2">(3-1)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.40" data-e="1">1.40</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.33" data-e="1">4.33</td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.50" data-e="1">6.50</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.50">0.50</td>
+                    <td data-o="0.5/1">0.5/1</td>
+                    <td data-o="1.50">1.50</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_9" align="center" style="" vs="1" name="1385" index="2113617" info="3,0,5207,2,0" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2021-11-02 10:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2021,11-1,02,10,00,00', 3)</script>02-11-2021
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5207)"><span class="">Saudi Arabia U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2113617, 'Saudi Arabia U23', 'Bangladesh U23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">3-0</span><span class="hscore_2">(2-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td><span class="fcorner_2">12-0</span><span class="hcorner_2">(7-0)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.08" data-e="1">1.08</td>
+                    <td class="hbg-td1" name="oddsData" data-o="9.50" data-e="1">9.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="21.00" data-e="1">21.00</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.80">0.80</td>
+                    <td data-o="2.5/3">2.5/3</td>
+                    <td data-o="1.00">1.00</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_10" align="center" style="" vs="1" name="1385" index="2113615" info="6,0,5200,4,0" ahpanlu="0" oupanlu="2">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2021-10-30 10:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2021,10-1,30,10,00,00', 3)</script>30-10-2021
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5200)"><span class="">Uzbekistan U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2113615, 'Uzbekistan U23', 'Bangladesh U23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">6-0</span><span class="hscore_2">(4-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td><span class="fcorner_2">9-0</span><span class="hcorner_2">(5-0)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.40" data-e="1">1.40</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.00" data-e="1">4.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.50" data-e="1">6.50</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.90">0.90</td>
+                    <td data-o="2">2</td>
+                    <td data-o="0.90">0.90</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+                <tr id="tr2_11" align="center" style="display:none;" vs="0" name="1385" index="2113614" info="0,1,5126,0,1" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2021-10-27 10:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2021,10-1,27,10,00,00', 3)</script>27-10-2021
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(2113614, 'Bangladesh U23', 'Kuwait U23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">0-1</span><span class="hscore_2">(0-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(5205)"><span class="">Kuwait U23</span></a></td>
+                    <td><span class="fcorner_2">4-5</span><span class="hcorner_2">(1-1)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.20" data-e="1">3.20</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.00" data-e="1">4.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.80" data-e="1">1.80</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.95">0.95</td>
+                    <td data-o="-0.5">-0.5</td>
+                    <td data-o="0.85">0.85</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_12" align="center" style="display:none;" vs="1" name="979" index="1820666" info="1,0,23716,1,0" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="SAGA">SAGA                          </td>
+                    <td>
+                            <span name="timeData" data-t="2019-12-08 11:15:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,12-1,08,11,15,00', 3)</script>08-12-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(23716)"><span class="">Nepal U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1820666, 'Nepal U23', 'Bangladesh U23', 'SAGA')"><span class="fscore_2 red2">1-0</span><span class="hscore_2">(1-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td><span class="fcorner_2">2-12</span><span class="hcorner_2">(1-6)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.66" data-e="1">1.66</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.60" data-e="1">3.60</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.20" data-e="1">4.20</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.97">0.97</td>
+                    <td data-o="0.5/1">0.5/1</td>
+                    <td data-o="0.82">0.82</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_13" align="center" style="display:none;" vs="1" name="979" index="1821110" info="0,1,16235,0,1" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="SAGA">SAGA                          </td>
+                    <td>
+                            <span name="timeData" data-t="2019-12-05 11:45:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,12-1,05,11,45,00', 3)</script>05-12-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(16235)"><span class="">Sri LankaU23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1821110, 'Sri LankaU23', 'Bangladesh U23', 'SAGA')"><span class="fscore_2 red2">0-1</span><span class="hscore_2">(0-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td><span class="fcorner_2">1-5</span><span class="hcorner_2">(1-4)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.10" data-e="1">3.10</td>
+                    <td class="hbg-td1" name="oddsData" data-o="3.40" data-e="1">3.40</td>
+                    <td class="hbg-td1" name="oddsData" data-o="2.00" data-e="1">2.00</td>
+                    <td class="hbg-td1"><span class="o-win">W</span></td>
+                    <td data-o="0.80">0.80</td>
+                    <td data-o="-0.5">-0.5</td>
+                    <td data-o="1.00">1.00</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_14" align="center" style="display:none;" vs="1" name="979" index="1820660" info="1,1,13328,0,1" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="SAGA">SAGA                          </td>
+                    <td>
+                            <span name="timeData" data-t="2019-12-03 11:45:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,12-1,03,11,45,00', 3)</script>03-12-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(13328)"><span class="">Maldives U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1820660, 'Maldives U23', 'Bangladesh U23', 'SAGA')"><span class="fscore_2 red2">1-1</span><span class="hscore_2">(0-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td><span class="fcorner_2">3-6</span><span class="hcorner_2">(1-3)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.61" data-e="1">1.61</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.00" data-e="1">4.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.00" data-e="1">4.00</td>
+                    <td class="hbg-td1"><span class="o-draw">D</span></td>
+                    <td data-o="0.80">0.80</td>
+                    <td data-o="0.5/1">0.5/1</td>
+                    <td data-o="1.00">1.00</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_15" align="center" style="display:none;" vs="0" name="979" index="1820655" info="0,1,5126,0,0" ahpanlu="0" oupanlu="0">
+                    <td height="25" title="SAGA">SAGA                          </td>
+                    <td>
+                            <span name="timeData" data-t="2019-12-02 07:15:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,12-1,02,07,15,00', 3)</script>02-12-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1820655, 'Bangladesh U23', 'Bhutan U23', 'SAGA')"><span class="fscore_2 red2">0-1</span><span class="hscore_2">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(26337)"><span class="">Bhutan U23</span></a></td>
+                    <td><span class="fcorner_2">6-6</span><span class="hcorner_2">(4-2)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.16" data-e="1">1.16</td>
+                    <td class="hbg-td1" name="oddsData" data-o="7.50" data-e="1">7.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="10.00" data-e="1">10.00</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.88">0.88</td>
+                    <td data-o="2">2</td>
+                    <td data-o="0.92">0.92</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_16" align="center" style="display:none;" vs="0" name="1385" index="1687692" info="2,0,5126,2,0" ahpanlu="" oupanlu="">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2019-03-26 13:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,3-1,26,13,00,00', 3)</script>26-03-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1687692, 'Bangladesh U23', 'Sri LankaU23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">2-0</span><span class="hscore_2">(2-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(16235)"><span class="">Sri LankaU23</span></a></td>
+                    <td><span class="fcorner_2">-</span><span class="hcorner_2"></span></td>
+                    <td class="hbg-td1" name="oddsData"></td>
+                    <td class="hbg-td1" name="oddsData"></td>
+                    <td class="hbg-td1" name="oddsData"></td>
+                    <td class="hbg-td1">                <span class="o-win">W</span>
+</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr id="tr2_17" align="center" style="display:none;" vs="0" name="1385" index="1687690" info="0,1,5126,0,1" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2019-03-24 13:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,3-1,24,13,00,00', 3)</script>24-03-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1687690, 'Bangladesh U23', 'Palestine U23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">0-1</span><span class="hscore_2">(0-1)</span></td>
+                    <td><a onclick="soccerDbPage.team(13021)"><span class="">Palestine U23</span></a></td>
+                    <td><span class="fcorner_2">5-3</span><span class="hcorner_2">(1-1)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="11.00" data-e="1">11.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.00" data-e="1">6.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.16" data-e="1">1.16</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="1.15">1.15</td>
+                    <td data-o="-1.5/2">-1.5/2</td>
+                    <td data-o="0.68">0.68</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_18" align="center" style="display:none;" vs="1" name="1385" index="1687689" info="1,0,5202,1,0" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="AFC U23 Asian Cup">AFC U23                       </td>
+                    <td>
+                            <span name="timeData" data-t="2019-03-22 15:59:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2019,3-1,22,15,59,00', 3)</script>22-03-2019
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5202)"><span class="">Bahrain U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1687689, 'Bahrain U23', 'Bangladesh U23', 'AFC U23 Asian Cup')"><span class="fscore_2 red2">1-0</span><span class="hscore_2">(1-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td><span class="fcorner_2">8-3</span><span class="hcorner_2">(3-2)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.16" data-e="1">1.16</td>
+                    <td class="hbg-td1" name="oddsData" data-o="7.00" data-e="1">7.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="9.00" data-e="1">9.00</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="1.05">1.05</td>
+                    <td data-o="2/2.5">2/2.5</td>
+                    <td data-o="0.75">0.75</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+                <tr id="tr2_19" align="center" style="display:none;" vs="0" name="401" index="1606356" info="1,3,5126,0,2" ahpanlu="0" oupanlu="2">
+                    <td height="25" title="Asian Games">AGS                           </td>
+                    <td>
+                            <span name="timeData" data-t="2018-08-24 12:30:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2018,8-1,24,12,30,00', 3)</script>24-08-2018
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1606356, 'Bangladesh U23', 'North Korea U23', 'Asian Games')"><span class="fscore_2 red2">1-3</span><span class="hscore_2">(0-2)</span></td>
+                    <td><a onclick="soccerDbPage.team(5199)"><span class="">North Korea U23</span></a></td>
+                    <td><span class="fcorner_2">3-4</span><span class="hcorner_2">(1-2)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="7.00" data-e="1">7.00</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.20" data-e="1">4.20</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.36" data-e="1">1.36</td>
+                    <td class="hbg-td1"><span class="o-lose">L</span></td>
+                    <td data-o="0.78">0.78</td>
+                    <td data-o="-1.5">-1.5</td>
+                    <td data-o="1.02">1.02</td>
+                    <td><span class="o-lose">L</span></td>
+                    <td><span class="o-win">O</span></td>
+                </tr>
+                <tr id="tr2_20" align="center" style="display:none;" vs="0" name="401" index="1593266" info="1,0,5126,0,0" ahpanlu="2" oupanlu="0">
+                    <td height="25" title="Asian Games">AGS                           </td>
+                    <td>
+                            <span name="timeData" data-t="2018-08-19 12:00:00" data-tf="3">
+        <script language="Javascript" type="text/javascript">formatDate('2018,8-1,19,12,00,00', 3)</script>19-08-2018
+    </span>
+
+                    </td><td><a onclick="soccerDbPage.team(5126)"><span class="team-away-f">Bangladesh U23</span></a></td>
+                    <td style="cursor: pointer;" onclick="soccerInPage.detail(1593266, 'Bangladesh U23', 'Qatar U23', 'Asian Games')"><span class="fscore_2 red2">1-0</span><span class="hscore_2">(0-0)</span></td>
+                    <td><a onclick="soccerDbPage.team(5204)"><span class="">Qatar U23</span></a></td>
+                    <td><span class="fcorner_2">3-4</span><span class="hcorner_2">(1-3)</span></td>
+                    <td class="hbg-td1" name="oddsData" data-o="6.50" data-e="1">6.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="4.50" data-e="1">4.50</td>
+                    <td class="hbg-td1" name="oddsData" data-o="1.36" data-e="1">1.36</td>
+                    <td class="hbg-td1"><span class="o-win">W</span></td>
+                    <td data-o="0.85">0.85</td>
+                    <td data-o="-1.5">-1.5</td>
+                    <td data-o="0.95">0.95</td>
+                    <td><span class="o-win">W</span></td>
+                    <td><span class="o-lose">U</span></td>
+                </tr>
+            <tr name="nodataTr" style="display:none;">
+                <td colspan="16" style="line-height:70px;font-weight:bold;">No Data!</td>
+            </tr>
+</tbody></table>
+</div>
+
+
+        </div><div id="porletAd6" class="ad_l7">
+            <script language="javascript" type="text/javascript">getAnList("l7");</script>
+        </div><div name="sameOddsPorlet" class="porletP" id="porletP7">
+    <div class="content same-odds" id="sameOddsCount" style="display: block;">
+        <div class="team-table-title">
+            <span class="team-table-xq-home">
+                <a onclick="openFbTeam(5144)">Singapore U23</a>
+            </span>
+            Same Historical Odds Statistics
+            <span class="team-table-xq-guest">
+                <a onclick="openFbTeam(5126)">Bangladesh U23</a>
+            </span>
+        </div>
+        <div class="team-h1">
+            <span class="home-bg"></span>
+            <span class="away-bg"></span>
+        </div>
+
+        <div class="fx fx-vote-data">
+            <div class="bar">
+                <ul class="options">
+                    <span id="sameOddsBarOptions"><li onclick="_sameOdds.switchBar(2)" option="2" class="on">AH Odds</li><li onclick="_sameOdds.switchBar(1)" option="1">1x2 Odds</li><li onclick="_sameOdds.switchBar(3)" option="3">Over/Under Odds</li></span>
+                </ul>
+            </div>
+            <div id="oddsTxt" class="ext">Asian Handicap Odds:<b name="oddsData" data-o="1.02">1.02</b><b class="blue" data-o="0.25">0/0.5</b><b name="oddsData" data-o="0.77">0.77</b></div>
+            <ul id="sameOddsBars" class="fx-tb-a">
+    <li class="vote">
+        <div class="item">
+            <div class="fx-ht-data">
+                <div class="home-bg bar_shade" sameodds-rate="46" style="height: 46%;">
+                    <span class="fx-ht-data-w">46%</span>
+                </div>
+            </div>
+            <div class="fx-ht-data">
+                <div class="draw-bg bar_shade" sameodds-rate="0" style="height: 0%;">
+                    <span class="fx-ht-data-w">0%</span>
+                </div>
+            </div>
+            <div class="fx-ht-data">
+                <div class="away-bg bar_shade" sameodds-rate="54" style="height: 54%;">
+                    <span class="fx-ht-data-w">54%</span>
+                </div>
+            </div>
+        </div>
+        <div class="pItem">Total</div>
+    </li>
+
+    <li class="vote">
+        <div class="item">
+            <div class="fx-ht-data">
+                <div class="home-bg bar_shade" sameodds-rate="0" style="height: 0%;">
+                    <span class="fx-ht-data-w">0%</span>
+                </div>
+            </div>
+            <div class="fx-ht-data">
+                <div class="draw-bg bar_shade" sameodds-rate="0" style="height: 0%;">
+                    <span class="fx-ht-data-w">0%</span>
+                </div>
+            </div>
+            <div class="fx-ht-data">
+                <div class="away-bg bar_shade" sameodds-rate="0" style="height: 0%;">
+                    <span class="fx-ht-data-w">0%</span>
+                </div>
+            </div>
+        </div>
+        <div class="pItem">Main Leagues</div>
+    </li>
+
+    <li class="vote">
+        <div class="item">
+            <div class="fx-ht-data">
+                <div class="home-bg bar_shade" sameodds-rate="0" style="height: 0%;">
+                    <span class="fx-ht-data-w">0%</span>
+                </div>
+            </div>
+            <div class="fx-ht-data">
+                <div class="draw-bg bar_shade" sameodds-rate="0" style="height: 0%;">
+                    <span class="fx-ht-data-w">0%</span>
+                </div>
+            </div>
+            <div class="fx-ht-data">
+                <div class="away-bg bar_shade" sameodds-rate="0" style="height: 0%;">
+                    <span class="fx-ht-data-w">0%</span>
+                </div>
+            </div>
+        </div>
+        <div class="pItem">AFC U23 Asian Cup</div>
+    </li>
+</ul>
+            <div class="ext">
+                <span class="ident"><i class="home-bg"></i><span id="upTips">Home Win</span></span>
+                <span class="ident"><i class="draw-bg"></i><span id="drawTips">Draw</span></span>
+                <span class="ident"><i class="away-bg"></i><span id="downTips">Away Win</span></span>
+                <span class="ident">(The above data is for reference only and is based on historical data)</span>
+            </div>
+        </div>
+    </div>
+</div><div id="porletAd7" class="ad_l8">
+            <script language="javascript" type="text/javascript">getAnList("l8");</script>
+        </div><div class="porletP" id="porletP8">
+                
+
+
+<div id="oddsStat" class="content same-odds" style="display:block;">
+    <div class="team-table-title">
+        <span class="team-table-xq-home">
+            <a onclick="soccerDbPage.team(5144)">Singapore U23</a>
+        </span>
+        Odds Statistics
+        <span class="team-table-xq-guest">
+            <a onclick="soccerDbPage.team(5126)">Bangladesh U23</a>
+        </span>
+    </div>
+    <div class="team-h1">
+        <span class="home-bg"></span>
+        <span class="away-bg"></span>
+    </div>
+
+    <div class="fx fx-vote-data">
+        <div style="height:60px;">
+            <div class="option-rt">
+                <input type="checkbox" id="panLuStatHASel" onclick="switchOddsStat()">
+                <label for="panLuStatHASel">H-A Same</label>
+            </div>
+
+        </div>
+
+        <ul id="panLuStat" class="y-bar">
+            
+            <li class="group">
+                <div class="bars">
+                    <div class="item2" rate="0-0,0-0,0-0,0-0,50-0,100-0">
+                        <div class="home bar" style="height: 50%;">
+                            <span class="value">50%</span>
+                        </div>
+                        <div class="away bar" style="height: 0%;">
+                            <span class="value">0%</span>
+                        </div>
+                        <div class="txt">Win</div>
+                    </div>
+                    <div class="item2" rate="0-0,0-0,0-0,0-0,0-50,0-0">
+                        <div class="home bar" style="height: 0%;">
+                            <span class="value home">0%</span>
+                        </div>
+                        <div class="away bar" style="height: 50%;">
+                            <span class="value home">50%</span>
+                        </div>
+                        <div class="txt">Draw</div>
+                    </div>
+                    <div class="item2" rate="0-0,0-0,0-0,0-0,50-50,0-100">
+                        <div class="home bar" style="height: 50%;">
+                            <span class="value home">50%</span>
+                        </div>
+                        <div class="away bar" style="height: 50%;">
+                            <span class="value home">50%</span>
+                        </div>
+                        <div class="txt">Loss</div>
+                    </div>
+                </div>
+                <div class="tit">AH Odds <span id="AHStat_Count" count="0-0,0-0,0-0,0-0,2-2,1-1">(2 games - 2 games)</span></div>
+            </li>
+            
+            <li class="group">
+                <div class="bars">
+                    <div class="item2" rate="0-0,0-0,0-0,0-0,0-0,0-0">
+                        <div class="home bar" style="height: 0%;">
+                            <span class="value">0%</span>
+                        </div>
+                        <div class="away bar" style="height: 0%;">
+                            <span class="value">0%</span>
+                        </div>
+                        <div class="txt">Over</div>
+                    </div>
+                    <div class="item2" rate="0-0,0-0,0-0,0-0,50-0,0-0">
+                        <div class="home bar" style="height: 50%;">
+                            <span class="value home">50%</span>
+                        </div>
+                        <div class="away bar" style="height: 0%;">
+                            <span class="value home">0%</span>
+                        </div>
+                        <div class="txt">Draw</div>
+                    </div>
+                    <div class="item2" rate="0-0,0-0,0-0,0-0,50-100,100-100">
+                        <div class="home bar" style="height: 50%;">
+                            <span class="value home">50%</span>
+                        </div>
+                        <div class="away bar" style="height: 100%;">
+                            <span class="value home">100%</span>
+                        </div>
+                        <div class="txt">Under</div>
+                    </div>
+                </div>
+                <div class="tit">Over/Under Odds <span id="OUStat_Count" count="0-0,0-0,0-0,0-0,2-2,1-1">(2 games - 2 games)</span></div>
+            </li>
+        </ul>
+
+        <div class="ext">
+            <span class="ident"><i class="home-bg"></i>Home Team</span>
+            <span class="ident"><i class="away-bg"></i>Away Team</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    _panLuStat = {
+        showLeague: Boolean(false),
+        showCup: Boolean(true)
+    }
+
+    $(document).ready(function () {
+        if (_panLuStat.showLeague) switchOddsStat(0);
+        if (!_panLuStat.showLeague && _panLuStat.showCup) switchOddsStat(1);
+    })
+</script>
+
+
+            </div><div id="porletAd8" class="ad_l9">
+            <script language="javascript" type="text/javascript">getAnList("l9");</script>
+        </div><div class="porletP" id="porletP9">
+                
+
+
+<div id="goalStat" class="content same-odds" style="display:block;">
+    <div class="team-table-title">
+        <span class="team-table-xq-home">
+            <a onclick="soccerDbPage.team(5144)">Singapore U23</a>
+        </span>
+        Time of Goal
+        <span class="team-table-xq-guest">
+            <a onclick="soccerDbPage.team(5126)">Bangladesh U23</a>
+        </span>
+    </div>
+    <div class="team-h1">
+        <span class="home-bg"></span>
+        <span class="away-bg"></span>
+    </div>
+
+    <div class="fx fx-vote-data">
+        <div style="height:60px;">
+            <div class="option-rt">
+                <input type="checkbox" id="goalStatHASel" onclick="switchGoalStat()">
+                <label for="goalStatHASel">H-A Same</label>
+            </div>
+
+                <div class="bar">
+                    <ul id="goalStatOption" class="options">
+                        <span>
+                        <li onclick="switchGoalStat(0)" class="on">Goal distribution</li>
+                        <li onclick="switchGoalStat(1)">Goal time distribution</li>
+                        <li onclick="switchGoalStat(2)">First goal time distribution</li>
+                        </span>
+                    </ul>
+                </div>
+        </div>
+
+        
+            <ul id="goalNumStat" class="y-bar" rate="25^1-50^2,25^1-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,100^1-0^0,|50^1-50^1,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0">
+                <li class="group">
+                    <div class="bars">
+                                <div class="item2 small Lhigh">
+                                    <div class="home bar" style="height: 25%;">
+                                        <span class="value">1</span>
+                                    </div>
+                                    <div class="away bar" style="height: 50%;">
+                                        <span class="value">2</span>
+                                    </div>
+                                    <div class="txt">0 Goals</div>
+                                </div>
+                                <div class="item2 small Lhigh">
+                                    <div class="home bar" style="height: 25%;">
+                                        <span class="value">1</span>
+                                    </div>
+                                    <div class="away bar" style="height: 0%;">
+                                        <span class="value">0</span>
+                                    </div>
+                                    <div class="txt">1 Goals</div>
+                                </div>
+                                <div class="item2 small Lhigh">
+                                    <div class="home bar" style="height: 0%;">
+                                        <span class="value">0</span>
+                                    </div>
+                                    <div class="away bar" style="height: 0%;">
+                                        <span class="value">0</span>
+                                    </div>
+                                    <div class="txt">2 Goals</div>
+                                </div>
+                                <div class="item2 small Lhigh">
+                                    <div class="home bar" style="height: 0%;">
+                                        <span class="value">0</span>
+                                    </div>
+                                    <div class="away bar" style="height: 0%;">
+                                        <span class="value">0</span>
+                                    </div>
+                                    <div class="txt">3 Goals</div>
+                                </div>
+                                <div class="item2 small Lhigh">
+                                    <div class="home bar" style="height: 0%;">
+                                        <span class="value">0</span>
+                                    </div>
+                                    <div class="away bar" style="height: 0%;">
+                                        <span class="value">0</span>
+                                    </div>
+                                    <div class="txt">4+ Goals</div>
+                                </div>
+                                <div class="item2 large">
+                                    <div class="home bar" style="height: 0%;">
+                                        <span class="value">0</span>
+                                    </div>
+                                    <div class="away bar" style="height: 0%;">
+                                        <span class="value">0</span>
+                                    </div>
+                                    <div class="txt">1st Half Of Goals</div>
+                                </div>
+                                <div class="item2 large">
+                                    <div class="home bar" style="height: 100%;">
+                                        <span class="value">1</span>
+                                    </div>
+                                    <div class="away bar" style="height: 0%;">
+                                        <span class="value">0</span>
+                                    </div>
+                                    <div class="txt">2nd Half Of Goals</div>
+                                </div>
+
+                    </div>
+                </li>
+            </ul>
+                    <ul id="goalTimeStat" class="y-bar" rate="0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,100^1-0^0,0^0-0^0,|0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,|0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,100^1-0^0,0^0-0^0,|0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0," style="display:none;">
+                <li class="group">
+                    <div class="bars">
+                                <div class="item2 Lhigh">
+                                    <div class="home bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="away bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="txt">1-10'</div>
+                                </div>
+                                <div class="item2 Lhigh">
+                                    <div class="home bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="away bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="txt">11-20'</div>
+                                </div>
+                                <div class="item2 Lhigh">
+                                    <div class="home bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="away bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="txt">21-30'</div>
+                                </div>
+                                <div class="item2 Lhigh">
+                                    <div class="home bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="away bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="txt">31-40'</div>
+                                </div>
+                                <div class="item2 Lhigh">
+                                    <div class="home bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="away bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="txt">40-45+'</div>
+                                </div>
+                                <div class="item2 Lhigh">
+                                    <div class="home bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="away bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="txt">46-50'</div>
+                                </div>
+                                <div class="item2 Lhigh">
+                                    <div class="home bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="away bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="txt">51-60'</div>
+                                </div>
+                                <div class="item2 Lhigh">
+                                    <div class="home bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="away bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="txt">61-70'</div>
+                                </div>
+                                <div class="item2 Lhigh">
+                                    <div class="home bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="away bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="txt">71-80'</div>
+                                </div>
+                                <div class="item2 Lhigh">
+                                    <div class="home bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="away bar">
+                                        <span class="value"></span>
+                                    </div>
+                                    <div class="txt">81-90+'</div>
+                                </div>
+
+                    </div>
+                </li>
+            </ul>
+
+        <div class="ext">
+            <span class="ident"><i class="home-bg"></i>Home Team</span>
+            <span class="ident"><i class="away-bg"></i>Away Team</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    _goalStat = {
+        showCount: Boolean(true),
+        showTime: Boolean(true)
+    }
+
+    $(document).ready(function () {
+        if (!_goalStat.showCount && _goalStat.showTime) {
+            $("#goalTimeStat").show();
+        }
+        _goalStat.showCount ? switchGoalStat(0) : switchGoalStat(1);
+    })
+</script>
+
+
+            </div><div class="porletP" id="porletP10">
+                
+
+
+
+<div class="content same-odds" style="display:block;">
+    <div class="team-table-title">
+        <span class="team-table-xq-home">
+            <a onclick="soccerDbPage.team(5144)">Singapore U23</a>
+        </span>
+        Half Time / Full Time
+        <span class="team-table-xq-guest">
+            <a onclick="soccerDbPage.team(5126)">Bangladesh U23</a>
+        </span>
+    </div>
+    <div class="team-h1">
+        <span class="home-bg"></span>
+        <span class="away-bg"></span>
+    </div>
+
+    <div class="fx fx-vote-data">
+        <div style="height:30px;">
+            <div class="option-rt">
+                <input type="checkbox" id="HFStatHASel" onclick="loadHFStat()">
+                <label for="HFStatHASel">H-A Same</label>
+            </div>
+        </div>
+
+        <ul id="HFStat" class="y-bar" rate="0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,25^1-25^1,0^0-0^0,0^0-0^0,25^1-25^1,|0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,0^0-0^0,50^1-0^0,0^0-0^0,0^0-0^0,0^0-50^1,">
+            <li class="group">
+                <div class="bars">
+                            <div class="item2 Lhigh">
+                                <div class="home bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="away bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="txt">W/W</div>
+                            </div>
+                            <div class="item2 Lhigh">
+                                <div class="home bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="away bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="txt">W/D</div>
+                            </div>
+                            <div class="item2 Lhigh">
+                                <div class="home bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="away bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="txt">W/L</div>
+                            </div>
+                            <div class="item2 Lhigh">
+                                <div class="home bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="away bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="txt">D/W</div>
+                            </div>
+                            <div class="item2 Lhigh">
+                                <div class="home bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="away bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="txt">D/D</div>
+                            </div>
+                            <div class="item2 Lhigh">
+                                <div class="home bar" style="height: 25%;">
+                                    <span class="value">1</span>
+                                </div>
+                                <div class="away bar" style="height: 25%;">
+                                    <span class="value">1</span>
+                                </div>
+                                <div class="txt">D/L</div>
+                            </div>
+                            <div class="item2 Lhigh">
+                                <div class="home bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="away bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="txt">L/W</div>
+                            </div>
+                            <div class="item2 Lhigh">
+                                <div class="home bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="away bar" style="height: 0%;">
+                                    <span class="value">0</span>
+                                </div>
+                                <div class="txt">L/D</div>
+                            </div>
+                            <div class="item2 Lhigh">
+                                <div class="home bar" style="height: 25%;">
+                                    <span class="value">1</span>
+                                </div>
+                                <div class="away bar" style="height: 25%;">
+                                    <span class="value">1</span>
+                                </div>
+                                <div class="txt">L/L</div>
+                            </div>
+
+                </div>
+            </li>
+        </ul>
+
+        <div class="ext">
+            <span class="ident"><i class="home-bg"></i>Home Team</span>
+            <span class="ident"><i class="away-bg"></i>Away Team</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        loadHFStat();
+    })
+</script>
+            </div><div class="porletP" id="porletP12">
+                <h2 class="team-table-title2"><span>Fixture (3 Matches)</span></h2>
+                <div class="team-div">
+                    <div class="home-div">
+
+<div class="team-table-home" style="margin-bottom:0px;">
+    <a onclick="soccerDbPage.team(5144)" class="vv">Singapore U23</a>
+</div>
+
+    <div class="nodata" style="width:100%;height:25px;">
+        No Data!
+    </div>
+</div>
+                    <div class="guest-div">
+
+<div class="team-table-guest" style="margin-bottom:0px;">
+    <a onclick="soccerDbPage.team(5144)" class="vv">Bangladesh U23</a>
+</div>
+
+    <div class="nodata" style="width:100%;height:25px;">
+        No Data!
+    </div>
+</div>
+                </div>
+            </div></div>
+    <div style="text-align: center; line-height: 30px"><span class="style22"><b>Last Updated      <span name="timeData" data-t="2025-09-09 09:35:27" data-tf="2">
+        <script language="Javascript" type="text/javascript">formatDate('2025,9-1,09,09,35,27', 2)</script>09-09-2025 11:35
+    </span>
+</b></span></div>
+    <div style="display:none;">Version:2.5</div>
+        <div id="ad_middle_bottom">
+            <script language="javascript" type="text/javascript">getBottomFly("a");</script><div id="bottomFly" style="position: fixed;z-index:1;bottom: 0;"><div class="flyClose" onclick="CloseAdById(&quot;bottomFly&quot;,false)"></div></div>
+        </div>
+</div>
+
+<div id="analyMap" style="position: fixed; top: 169px; right: 41.5px; left: 1075px;"><a href="javascript:void(0);" onclick="openSetting();return false;">Settings</a><a href="#" id="liveCompareSet" style="display:" title="Live Odds Comparison" onclick="window.location.hash =&quot;#porletP0&quot;;window.location = window.location;return false;">LOC</a><a href="#" title="Strength Comparison" onclick="window.location.hash =&quot;#porletP1&quot;;window.location = window.location;return false;">Strength</a><a href="#" title="Who will win" onclick="window.location.hash =&quot;#porletP2&quot;;window.location = window.location;return false;">Vote</a><a href="#" title="Standings" onclick="window.location.hash =&quot;#porletP4&quot;;window.location = window.location;return false;"> Rank</a><a href="#" title="Head to Head Statistics" onclick="window.location.hash =&quot;#porletP5&quot;;window.location = window.location;return false;"> HTH</a><a href="#" title="Previous Scores Statistics" onclick="window.location.hash =&quot;#porletP6&quot;;window.location = window.location;return false;">  PSS</a><a href="#" title="Same historical Handicap Odds" onclick="window.location.hash =&quot;#porletP7&quot;;window.location = window.location;return false;"> SHHO</a><a href="#" title="Odds Statistics" onclick="window.location.hash =&quot;#porletP8&quot;;window.location = window.location;return false;">Odds Stats</a><a href="#" title="Goal Scoring Statistics" onclick="window.location.hash =&quot;#porletP9&quot;;window.location = window.location;return false;">Goal Stats</a><a href="#" title="Half Time / Full Time" onclick="window.location.hash =&quot;#porletP10&quot;;window.location = window.location;return false;"> HT/FT</a><a href="#" title="Fixture" onclick="window.location.hash =&quot;#porletP12&quot;;window.location = window.location;return false;"> Fixture</a></div>
+
+<div style="display:none;" id="bt_add_div"></div>
+
+
+<style>
+    .tabsBox { float:right;min-width:100px;overflow:hidden;border-radius: 4px; }
+    .tabsBox .item { line-height:26px;width:50%;float:left;text-align:center; }
+    .tabsBox a{min-width:auto;border:none;}
+    .tabsBox .item.on { background-color:var(--primary-color);color:#fff; }
+    .tabsBox .item.on a { color:#fff;}
+    .lb {border-left:1px solid #e5e5e5;}
+    .rb {border-right:1px solid #e5e5e5;}
+    .sb {border-left:1px solid #ddd;border-right:1px solid #ddd;}
+    .dark .tabsBox a {background-color:unset;}
+</style>
+
+
+<script src="/scripts/soccer/analysis?v=ZWX7GNXEjCN8NPVmlP-mt0QER0RqdbsRaHGKqp4hzy81"></script>
+
+    </div>
