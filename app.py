@@ -6,7 +6,6 @@ except ImportError:
     WSGIMiddleware = None
 
 import asyncio
-from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 import datetime
 import re
@@ -87,36 +86,22 @@ def _fetch_nowgoal_html_sync(url: str) -> str | None:
 
 async def _fetch_nowgoal_html(path: str | None = None, filter_state: int | None = None, requests_first: bool = True) -> str | None:
     target_url = _build_nowgoal_url(path)
-    html_content = None
+    attempts = 1 if requests_first else 2
+    last_exc: Exception | None = None
 
-    if requests_first:
+    for attempt in range(attempts):
         try:
             html_content = await asyncio.to_thread(_fetch_nowgoal_html_sync, target_url)
-        except Exception as exc:
-            print(f"Error asincronico al lanzar la carga con requests ({target_url}): {exc}")
-            html_content = None
-
-    if html_content:
-        return html_content
-
-    try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
-            try:
-                await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
-                await page.wait_for_timeout(2000)
+            if html_content:
                 if filter_state is not None:
-                    try:
-                        await page.evaluate("(state) => { if (typeof HideByState === 'function') { HideByState(state); } }", filter_state)
-                        await page.wait_for_timeout(1000)
-                    except Exception as eval_err:
-                        print(f"Advertencia al aplicar HideByState({filter_state}) en {target_url}: {eval_err}")
-                return await page.content()
-            finally:
-                await browser.close()
-    except Exception as browser_exc:
-        print(f"Error al obtener la pagina con Playwright ({target_url}): {browser_exc}")
+                    print(f"Aviso: filter_state={filter_state} no se puede aplicar sin Playwright para {target_url}.")
+                return html_content
+        except Exception as exc:
+            last_exc = exc
+            print(f"Error asincronico al cargar {target_url} (intento {attempt + 1}): {exc}")
+
+    if last_exc is not None:
+        print(f"No se pudo obtener contenido de {target_url} tras {attempts} intento(s).")
     return None
 
 def _parse_number_clean(s: str):

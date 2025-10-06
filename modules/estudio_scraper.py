@@ -7,12 +7,14 @@ from modules.funciones_auxiliares import _calcular_estadisticas_contra_rival, _a
 import time
 import re
 import math
+import os
 from bs4 import BeautifulSoup
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
@@ -24,6 +26,30 @@ from modules.utils import parse_ah_to_number_of, format_ah_as_decimal_string_of,
 BASE_URL_OF = "https://live18.nowgoal25.com"
 SELENIUM_TIMEOUT_SECONDS_OF = 10
 PLACEHOLDER_NODATA = "*(No disponible)*"
+
+
+def _build_chrome_options():
+    options = ChromeOptions()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0.0.0 Safari/537.36")
+    options.add_argument("--blink-settings=imagesEnabled=false")
+    chrome_binary = os.getenv("GOOGLE_CHROME_BIN") or os.getenv("CHROME_BINARY")
+    if chrome_binary:
+        options.binary_location = chrome_binary
+    return options
+
+def _create_chrome_driver(options: ChromeOptions):
+    chromedriver_path = os.getenv("CHROMEDRIVER_PATH")
+    if chromedriver_path:
+        try:
+            return webdriver.Chrome(service=Service(chromedriver_path), options=options)
+        except (WebDriverException, FileNotFoundError) as exc:
+            print(f"Advertencia: no se pudo inicializar Chrome usando CHROMEDRIVER_PATH='{chromedriver_path}': {exc}")
+            print("Se intentara usar el chromedriver disponible en el PATH.")
+    return webdriver.Chrome(options=options)
 
 def parse_ah_to_number_of(ah_line_str: str):
     if not isinstance(ah_line_str, str): return None
@@ -871,14 +897,8 @@ def obtener_datos_completos_partido(match_id: str):
         return {"error": "ID de partido inválido."}
 
     # --- Inicialización de Selenium ---
-    options = ChromeOptions()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0.0.0 Safari/537.36")
-    options.add_argument('--blink-settings=imagesEnabled=false')
-    driver = webdriver.Chrome(options=options)
+    options = _build_chrome_options()
+    driver = _create_chrome_driver(options)
     
     main_page_url = f"{BASE_URL_OF}/match/h2h-{match_id}"
     datos = {"match_id": match_id}
@@ -1078,14 +1098,8 @@ def obtener_datos_preview_rapido(match_id: str):
     url = f"{BASE_URL_OF}/match/h2h-{match_id}"
     try:
         # 1. Cargar con Selenium para replicar el método de extracción principal
-        options = ChromeOptions()
-        options.add_argument("--headless")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
-        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0.0.0 Safari/537.36")
-        options.add_argument('--blink-settings=imagesEnabled=false')
-        driver = webdriver.Chrome(options=options)
+        options = _build_chrome_options()
+        driver = _create_chrome_driver(options)
         driver.get(url)
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "table_v1")))
         # Ajustar selects a 8, igual que en el flujo completo
