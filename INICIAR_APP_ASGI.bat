@@ -43,7 +43,7 @@ echo  Workers: %WORKERS%
 echo ======================================================
 echo.
 
-"%PYTHON_EXE%" -m %UVICORN_MODULE% app:app --host %HOST% --port %PORT% --workers %WORKERS%
+"%PYTHON_EXE%" -m %UVICORN_MODULE% app:asgi_app --host %HOST% --port %PORT% --workers %WORKERS%
 if errorlevel 1 goto :error
 
 echo.

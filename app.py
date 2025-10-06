@@ -1,5 +1,10 @@
 # app.py - Servidor web principal (Flask)
 from flask import Flask, render_template, abort, request
+try:
+    from uvicorn.middleware.wsgi import WSGIMiddleware
+except ImportError:
+    WSGIMiddleware = None
+
 import asyncio
 from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
@@ -24,6 +29,12 @@ from modules.estudio_scraper import (
 from flask import jsonify # Asegúrate de que jsonify está importado
 
 app = Flask(__name__)
+if WSGIMiddleware is not None:
+    asgi_app = WSGIMiddleware(app)
+else:
+    async def asgi_app(scope, receive, send):
+        raise RuntimeError("uvicorn.middleware.wsgi no está disponible; instala uvicorn[standard] para usar ASGI")
+
 
 # --- Mantén tu lógica para la página principal ---
 URL_NOWGOAL = "https://live20.nowgoal25.com/"
