@@ -6,6 +6,7 @@ except ImportError:
     WSGIMiddleware = None
 
 import asyncio
+import os
 from bs4 import BeautifulSoup
 import datetime
 import re
@@ -769,5 +770,6 @@ def start_analysis_background():
     return jsonify({'status': 'success', 'message': f'Análisis iniciado para el partido {match_id}'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True) # debug=True es útil para desarrollar
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True) # debug=True es útil para desarrollar
 
