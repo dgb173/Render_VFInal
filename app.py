@@ -39,6 +39,12 @@ else:
 # --- Mantén tu lógica para la página principal ---
 URL_NOWGOAL = "https://live20.nowgoal25.com/"
 
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_FALLBACK_HTML_FILES = {
+    "": os.path.join(_BASE_DIR, "html_extraer", "proximos_20_simp.txt"),
+    "football/results": os.path.join(_BASE_DIR, "html_extraer", "resultados.txt"),
+}
+
 REQUEST_TIMEOUT_SECONDS = 12
 _REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
@@ -85,6 +91,23 @@ def _fetch_nowgoal_html_sync(url: str) -> str | None:
         return None
 
 
+def _load_fallback_html(path: str | None = None) -> str | None:
+    """Lee el HTML de respaldo local si existe."""
+    key = (path or "").strip("/")
+    fallback_path = _FALLBACK_HTML_FILES.get(key, None)
+    if not fallback_path:
+        return None
+    try:
+        with open(fallback_path, "r", encoding="utf-8") as fh:
+            print(f"Usando HTML de respaldo local: {fallback_path}")
+            return fh.read()
+    except FileNotFoundError:
+        print(f"Archivo de respaldo no encontrado: {fallback_path}")
+    except OSError as exc:
+        print(f"Error al leer el archivo de respaldo {fallback_path}: {exc}")
+    return None
+
+
 async def _fetch_nowgoal_html(path: str | None = None, filter_state: int | None = None, requests_first: bool = True) -> str | None:
     target_url = _build_nowgoal_url(path)
     attempts = 1 if requests_first else 2
@@ -103,6 +126,9 @@ async def _fetch_nowgoal_html(path: str | None = None, filter_state: int | None 
 
     if last_exc is not None:
         print(f"No se pudo obtener contenido de {target_url} tras {attempts} intento(s).")
+    fallback_html = _load_fallback_html(path)
+    if fallback_html:
+        return fallback_html
     return None
 
 def _parse_number_clean(s: str):
