@@ -14,4 +14,4 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "app:asgi_app", "--bind", "0.0.0.0:5000"]
+CMD ["sh", "-c", "exec gunicorn -k uvicorn.workers.UvicornWorker -w 4 app:asgi_app --bind 0.0.0.0:${PORT:-5000}"]
