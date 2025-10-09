@@ -214,7 +214,7 @@
             previewContainer.innerHTML = '<div class="preview-loading">Buscando analisis detallado...</div>';
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000);
+            const timeoutId = setTimeout(() => controller.abort(), 120000);
 
             fetch(`/api/analisis/${matchId}`, { signal: controller.signal })
                 .then(response => response.json())
@@ -383,7 +383,7 @@
                 .catch(error => {
                     clearTimeout(timeoutId);
                     if (error.name === 'AbortError') {
-                        previewContainer.innerHTML = '<div class="preview-loading">Tiempo de espera agotado (60s).</div>';
+                        previewContainer.innerHTML = '<div class="preview-loading">Tiempo de espera agotado (120s).</div>';
                     } else {
                         console.error('Error:', error);
                         previewContainer.innerHTML = '<div class="preview-loading">Error al cargar el analisis.</div>';
