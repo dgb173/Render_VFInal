@@ -1,282 +1,292 @@
-Excelente. El objetivo es maximizar la concurrencia y reducir la latencia eliminando el cuello de botella de asyncio.run(), a la vez que se mejora la eficiencia del scraping con Playwright.
+¡Hecho! Aquí tienes el **PROMPT DEFINITIVO PARA CODEX**, ultraespecífico. Pégalo tal cual, deja que Codex haga los cambios, sube el repo a GitHub y despliega en Render (plan gratis). Está pensado para tu stack actual (Flask + requests + Playwright, con módulos `analisis_*`, `estudio_scraper.py`, `utils.py`, `scraper_partidos.py`, etc.) y para que **no rompa tus firmas** ni tus rutas.
 
-A continuación, se presenta el código optimizado, seguido de las explicaciones detalladas de los cambios.
+---
 
-CÓDIGO OPTIMIZADO (app.py)
+# PROMPT PARA CODEX — “Render-Ready Refactor” (copiar/pegar)
 
-He marcado los cambios críticos como ### OPTIMIZACIÓN CRÍTICA ###.
+Quiero que conviertas **mi proyecto actual (Flask + scraping)** en una app **100% apta para Render (plan gratuito)** sin romper ninguna firma pública ya usada por mis módulos de análisis. Aplica EXACTAMENTE lo siguiente, archivo por archivo, y entrégame los archivos finales completos (no fragmentos), más un *diff* claro.
 
-code
-Python
-download
-content_copy
-expand_less
-# app.py - Servidor web principal (Flask)
-from flask import Flask, render_template, abort, request
-import asyncio
-# ¡Importante! Se recomienda instalar 'flask[async]' (pip install 'flask[async]')
-# para asegurar el soporte nativo de rutas async.
-from playwright.async_api import async_playwright
-from bs4 import BeautifulSoup
-import datetime
-import re
-import math
-import threading
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+## 0) Objetivo
 
-# ¡Importante! Importa tu nuevo módulo de scraping
-from modules.estudio_scraper import (
-    obtener_datos_completos_partido, 
-    format_ah_as_decimal_string_of, 
-    obtener_datos_preview_rapido, 
-    obtener_datos_preview_ligero, 
-    generar_analisis_mercado_simplificado,
-    check_handicap_cover,
-    parse_ah_to_number_of
-)
-from flask import jsonify 
+* Servir Flask detrás de **gunicorn** escuchando en `0.0.0.0:$PORT`.
+* Scraping **requests → fallback Playwright (Chromium)** con los flags correctos de contenedor.
+* Mantener **todas las firmas** que ya usa mi app (especialmente las de utilidades AH y las que consumen `analisis_avanzado.py`, `analisis_reciente.py`, `analisis_rivales.py`, `estudio_scraper.py`).
+* Normalizar comparación de tiempos en **UTC** (Render usa UTC); solo convertir a `Europe/Madrid` al mostrar si procede.
+* Añadir **logging**, ruta **/healthz** y **/debug**.
+* Proveer `requirements.txt`, `render.yaml` (opcional) y README con **Build/Start Commands** para Render.
+* No añadir técnicas para evadir anti-bot; si la web bloquea datacenters, lo dejamos documentado.
 
-app = Flask(__name__)
+## 1) Mantener estructura y firmas
 
-# --- Mantén tu lógica para la página principal ---
-URL_NOWGOAL = "https://live20.nowgoal25.com/"
+* **No cambies nombres ni parámetros** de las funciones ya usadas por `app.py` y los módulos `analisis_*`.
+* Si existen duplicados de utilidades de hándicap (`parse_ah_to_number_of`, `format_ah_as_decimal_string_of`, `check_handicap_cover`) en más de un archivo, **centralízalas en `utils.py`** y actualiza los imports en el resto. **Las firmas deben quedar idénticas**.
+* No elimines rutas; solo añade `/healthz` y `/debug`.
 
-REQUEST_TIMEOUT_SECONDS = 12
-_REQUEST_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-    "Connection": "keep-alive",
-    "Referer": URL_NOWGOAL,
-}
+## 2) Archivos a crear/actualizar
 
-_requests_session = None
-_requests_session_lock = threading.Lock()
-# ### OPTIMIZACIÓN CRÍTICA: ELIMINAMOS EL LOCK DE FETCH ###
-# _requests_fetch_lock = threading.Lock() 
+### 2.1 `requirements.txt` (crear o actualizar con estas líneas mínimas)
 
+```
+flask
+gunicorn
+requests
+urllib3
+beautifulsoup4
+pytz
+playwright
+tenacity
+```
 
-def _build_nowgoal_url(path: str | None = None) -> str:
-    if not path:
-        return URL_NOWGOAL
-    base = URL_NOWGOAL.rstrip('/')
-    suffix = path.lstrip('/')
-    return f"{base}/{suffix}"
+> Si el proyecto usa `zoneinfo` (stdlib 3.9+), no hace falta backport. No añadas Selenium aquí.
 
+---
 
-def _get_shared_requests_session():
-    global _requests_session
-    with _requests_session_lock:
-        if _requests_session is None:
-            session = requests.Session()
-            retries = Retry(total=3, backoff_factor=0.4, status_forcelist=[500, 502, 503, 504])
-            adapter = HTTPAdapter(max_retries=retries)
-            session.mount("https://", adapter)
-            session.mount("http://", adapter)
-            session.headers.update(_REQUEST_HEADERS)
-            _requests_session = session
-        return _requests_session
+### 2.2 `app.py` (actualizar sin romper rutas existentes)
 
+1. **Logging y configuración** al inicio:
 
-def _fetch_nowgoal_html_sync(url: str) -> str | None:
-    session = _get_shared_requests_session()
+```python
+import os, logging
+from flask import Flask, jsonify, render_template
+
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=getattr(logging, LOG_LEVEL, logging.INFO),
+                    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+logger = logging.getLogger("app")
+```
+
+2. **Asegúrate** de que exista `app = Flask(__name__)` accesible por `gunicorn app:app`.
+3. **Añade endpoints de salud y debug**, sin tocar los existentes:
+
+```python
+@app.get("/healthz")
+def healthz():
+    return jsonify({"status": "ok"}), 200
+
+@app.get("/debug")
+def debug():
+    from scraper_partidos import fetch_with_requests, html_has_rows, fetch_html_via_playwright_sync, TARGET_URL
     try:
-        # ### OPTIMIZACIÓN CRÍTICA: ELIMINACIÓN DEL BLOQUEO ###
-        # Eliminamos el bloqueo (lock) de aquí. La concurrencia se manejará con asyncio.to_thread.
-        # with _requests_fetch_lock:
-        response = session.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
-        response.raise_for_status()
-        return response.text
-    except Exception as exc:
-        print(f"Error al obtener {url} con requests: {exc}")
+        html = fetch_with_requests(TARGET_URL, timeout=20)
+        info = {
+            "method": "requests",
+            "status": "ok",
+            "len": len(html or ""),
+            "has_rows": bool(html and html_has_rows(html))
+        }
+        if not info["has_rows"]:
+            html2 = fetch_html_via_playwright_sync(TARGET_URL, timeout_ms=20000)
+            info.update({
+                "method": "playwright",
+                "len": len(html2 or ""),
+                "has_rows": bool(html2 and html_has_rows(html2))
+            })
+        return jsonify(info), 200
+    except Exception as e:
+        logger.exception("debug error")
+        return jsonify({"error": str(e)}), 500
+```
+
+4. **Quita cualquier `app.run(...)` en producción.** Deja:
+
+```python
+if __name__ == "__main__":
+    # Solo para desarrollo local:
+    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "8080")), debug=True)
+```
+
+> Gunicorn en Render será el responsable de arrancar.
+
+5. **Zonas horarias**: si formateas la hora en la tabla, **no sumes offsets fijos (+1/+2)**. Internamente compara en UTC; al presentar, si necesitas, convierte con `Europe/Madrid` SOLO en las plantillas o en la serialización de respuesta. No rompas firmas.
+
+---
+
+### 2.3 `scraper_partidos.py` (hacer robusto para Render)
+
+* Debe exponer como mínimo:
+
+```python
+# URL objetivo
+TARGET_URL = "https://live21.nowgoal25.com/..."  # deja la que uses ahora
+
+# 1) Requests con UA y timeout
+import requests
+
+UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+def fetch_with_requests(url: str, timeout: int = 20) -> str | None:
+    try:
+        r = requests.get(url, headers={"User-Agent": UA}, timeout=timeout)
+        if r.status_code == 200:
+            return r.text
+        return None
+    except Exception:
         return None
 
+# 2) Detección de filas/odds en el HTML
+def html_has_rows(html: str) -> bool:
+    if not html:
+        return False
+    # Ajusta a tu selector real de filas con odds/handicap:
+    return ("tr1_" in html) or ('odds="' in html)  # mínimo; afina si ya tienes selectores
 
-async def _fetch_nowgoal_html(path: str | None = None, filter_state: int | None = None, requests_first: bool = True) -> str | None:
-    target_url = _build_nowgoal_url(path)
-    html_content = None
+# 3) Playwright con flags de contenedor
+import asyncio
+from playwright.async_api import async_playwright
 
-    if requests_first:
+PLAYWRIGHT_ARGS = ["--no-sandbox", "--disable-dev-shm-usage"]
+
+async def fetch_with_playwright(url: str, timeout_ms: int = 20000) -> str | None:
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True, args=PLAYWRIGHT_ARGS)
+        context = await browser.new_context(user_agent=UA)
+        page = await context.new_page()
         try:
-            # Sigue usando asyncio.to_thread para mantener la petición requests fuera del loop
-            html_content = await asyncio.to_thread(_fetch_nowgoal_html_sync, target_url)
-        except Exception as exc:
-            print(f"Error asincronico al lanzar la carga con requests ({target_url}): {exc}")
-            html_content = None
-
-    if html_content:
-        return html_content
-
-    # El bloque de Playwright se ejecuta solo si el request falla
-    try:
-        async with async_playwright() as p:
-            # ### OPTIMIZACIÓN: SE REDUCE EL TIMEOUT DE ARRANQUE ###
-            # Esto mejora la latencia percibida en el peor de los casos (cuando se necesita Playwright)
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
+            await page.goto(url, wait_until="networkidle", timeout=timeout_ms)
+            # Espera al selector clave (ajústalo a tu tabla real):
             try:
-                await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
-                # ### OPTIMIZACIÓN: REDUCIR TIEMPOS DE ESPERA ###
-                await page.wait_for_timeout(2000) # Reducido de 4000ms a 2000ms
-                if filter_state is not None:
-                    try:
-                        await page.evaluate("(state) => { if (typeof HideByState === 'function') { HideByState(state); } }", filter_state)
-                        await page.wait_for_timeout(1000) # Reducido de 1500ms a 1000ms
-                    except Exception as eval_err:
-                        print(f"Advertencia al aplicar HideByState({filter_state}) en {target_url}: {eval_err}")
-                return await page.content()
-            finally:
-                await browser.close()
-    except Exception as browser_exc:
-        print(f"Error al obtener la pagina con Playwright ({target_url}): {browser_exc}")
-    return None
+                await page.wait_for_selector("tr[id^='tr1_']", state="attached", timeout=timeout_ms)
+            except Exception:
+                pass
+            html = await page.content()
+            return html
+        finally:
+            await context.close()
+            await browser.close()
 
-# [ ... El resto de las funciones auxiliares (parse_number, normalize_handicap, parse_main_page_matches, etc.) se mantienen ... ]
-# ...
-
-# --- Rutas que requieren optimización de concurrencia ---
-
-# ### OPTIMIZACIÓN CRÍTICA: CONVERTIR A RUTA ASÍNCRONA ###
-@app.route('/')
-async def index():
+def fetch_html_via_playwright_sync(url: str, timeout_ms: int = 20000) -> str | None:
     try:
-        print("Recibida petición para Próximos Partidos...")
-        hf = request.args.get('handicap')
-        # ELIMINAR asyncio.run() y USAR await
-        matches = await get_main_page_matches_async(handicap_filter=hf)
-        print(f"Scraper finalizado. {len(matches)} partidos encontrados.")
-        opts = sorted({
-            normalize_handicap_to_half_bucket_str(m.get('handicap'))
-            for m in matches if normalize_handicap_to_half_bucket_str(m.get('handicap')) is not None
-        }, key=lambda x: float(x))
-        return render_template('index.html', matches=matches, handicap_filter=hf, handicap_options=opts, page_mode='upcoming', page_title='Próximos Partidos')
-    except Exception as e:
-        print(f"ERROR en la ruta principal: {e}")
-        # En una ruta async, el manejo de errores es más directo
-        return render_template('index.html', matches=[], error=f"No se pudieron cargar los partidos: {e}", page_mode='upcoming', page_title='Próximos Partidos')
+        return asyncio.run(fetch_with_playwright(url, timeout_ms=timeout_ms))
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(fetch_with_playwright(url, timeout_ms=timeout_ms))
+        finally:
+            loop.close()
+```
 
-# ### OPTIMIZACIÓN CRÍTICA: CONVERTIR A RUTA ASÍNCRONA ###
-@app.route('/resultados')
-async def resultados():
-    try:
-        print("Recibida petición para Partidos Finalizados...")
-        hf = request.args.get('handicap')
-        # ELIMINAR asyncio.run() y USAR await
-        matches = await get_main_page_finished_matches_async(handicap_filter=hf)
-        print(f"Scraper finalizado. {len(matches)} partidos encontrados.")
-        opts = sorted({
-            normalize_handicap_to_half_bucket_str(m.get('handicap'))
-            for m in matches if normalize_handicap_to_half_bucket_str(m.get('handicap')) is not None
-        }, key=lambda x: float(x))
-        return render_template('index.html', matches=matches, handicap_filter=hf, handicap_options=opts, page_mode='finished', page_title='Resultados Finalizados')
-    except Exception as e:
-        print(f"ERROR en la ruta de resultados: {e}")
-        return render_template('index.html', matches=[], error=f"No se pudieron cargar los partidos: {e}", page_mode='finished', page_title='Resultados Finalizados')
+* **Pipeline recomendado** donde ya parseas y normalizas tiempos a UTC (mantén tus funciones actuales de parseo; no cambies firmas). Si hay filtros “próximos”, que comparen en UTC.
 
-# ### OPTIMIZACIÓN CRÍTICA: CONVERTIR A RUTA ASÍNCRONA ###
-@app.route('/api/matches')
-async def api_matches():
-    try:
-        offset = int(request.args.get('offset', 0))
-        limit = int(request.args.get('limit', 5))
-        limit = min(limit, 50)
-        # ELIMINAR asyncio.run() y USAR await
-        matches = await get_main_page_matches_async(limit, offset, request.args.get('handicap'))
-        return jsonify({'matches': matches})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+---
 
-# ### OPTIMIZACIÓN CRÍTICA: CONVERTIR A RUTA ASÍNCRONA ###
-@app.route('/api/finished_matches')
-async def api_finished_matches():
-    try:
-        offset = int(request.args.get('offset', 0))
-        limit = int(request.args.get('limit', 5))
-        limit = min(limit, 50)
-        # ELIMINAR asyncio.run() y USAR await
-        matches = await get_main_page_finished_matches_async(limit, offset, request.args.get('handicap'))
-        return jsonify({'matches': matches})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+### 2.4 `utils.py` (centralizar utilidades AH)
 
-# ### OPTIMIZACIÓN CRÍTICA: CONVERTIR A RUTA ASÍNCRONA ###
-@app.route('/proximos')
-async def proximos():
-    try:
-        print("Recibida petición. Ejecutando scraper de partidos...")
-        hf = request.args.get('handicap')
-        # ELIMINAR asyncio.run() y USAR await
-        matches = await get_main_page_matches_async(25, 0, hf)
-        print(f"Scraper finalizado. {len(matches)} partidos encontrados.")
-        opts = sorted({
-            normalize_handicap_to_half_bucket_str(m.get('handicap'))
-            for m in matches if normalize_handicap_to_half_bucket_str(m.get('handicap')) is not None
-        }, key=lambda x: float(x))
-        return render_template('index.html', matches=matches, handicap_filter=hf, handicap_options=opts)
-    except Exception as e:
-        print(f"ERROR en la ruta principal: {e}")
-        return render_template('index.html', matches=[], error=f"No se pudieron cargar los partidos: {e}")
+* Deja **aquí** las funciones de hándicap que usan los análisis y el servidor:
 
-# [ ... El resto de las rutas y la lógica se mantienen síncronas/hilos, ya que dependen del módulo estudio_scraper ... ]
+  * `parse_ah_to_number_of`
+  * `format_ah_as_decimal_string_of`
+  * `check_handicap_cover`
+* Si `estudio_scraper.py` o cualquier otro archivo las tiene duplicadas, **elimínalas allí** y **haz**:
 
-# --- RUTAS DE ESTUDIO (SE MANTIENEN SÍNCRONAS YA QUE USAN MODULOS EXTERNOS BLOQUEANTES) ---
+  ```python
+  from utils import parse_ah_to_number_of, format_ah_as_decimal_string_of, check_handicap_cover
+  ```
+* **No cambies** sus nombres ni parámetros.
 
-@app.route('/estudio/<string:match_id>')
-def mostrar_estudio(match_id):
-    # ... (Se mantiene síncrona)
-    datos_partido = obtener_datos_completos_partido(match_id)
-    # ... (resto del código)
-    
-# ... (resto de las rutas se mantienen síncronas) ...
+---
 
-if __name__ == '__main__':
-    # ¡ADVERTENCIA! app.run() NO DEBE USARSE EN PRODUCCIÓN CON ESTE CÓDIGO.
-    # Se utiliza Gunicorn/Uvicorn para ejecutar la aplicación asíncrona.
-    print("ADVERTENCIA: Para un rendimiento óptimo, ejecute con Gunicorn + Uvicorn Worker.")
-    # flask run --host=0.0.0.0 --port=5000 
-    app.run(host='0.0.0.0', port=5000, debug=True)
-EXPLICACIÓN DE LA OPTIMIZACIÓN
-1. Eliminación del Bloqueo Crítico (asyncio.run)
+### 2.5 `estudio_scraper.py`, `analisis_avanzado.py`, `analisis_reciente.py`, `analisis_rivales.py`, `funciones_auxiliares.py`
 
-Lo que se hizo: Se cambió la definición de las rutas principales (/, /resultados, /api/matches, /proximos) de def a async def y se reemplazó asyncio.run(...) por await ....
+* **No cambies firmas.**
+* Solo actualiza **imports** para que tomen las utilidades desde `utils.py` (si procede).
+* No introduzcas Selenium en el camino del servidor web; si alguna parte CLI lo usa, mantenla, pero que **las rutas Flask** dependan de requests/Playwright.
 
-Impacto en la Velocidad: Este es el cambio de rendimiento más importante. Al eliminar asyncio.run(), la aplicación pasa de ser un servidor WSGI bloqueante a un servidor ASGI no bloqueante.
+---
 
-Una solicitud de scraping que dura 10 segundos ahora no congelará el worker. En su lugar, el worker liberará el hilo de CPU para atender a otros usuarios, maximizando la concurrencia y reduciendo la latencia de respuesta para todos los usuarios.
+### 2.6 `templates/index.html`
 
-2. Eliminación del Bloqueo en requests
+* Asegúrate de que existe y no rompe. Si no existe, crea una mínima que:
 
-Lo que se hizo: Se eliminó el _requests_fetch_lock de la función _fetch_nowgoal_html_sync.
+  * Haga fetch a `/api/matches` (o tu endpoint actual).
+  * Pinte columnas: **Hora**, **Partido**, **Hándicap**, **Línea de Goles**, **Análisis Avanzado**, **Vista Previa Rápida** (según tus claves actuales).
+* No cambies nombres de campos que la app ya espera.
 
-Impacto en la Velocidad: Este lock serializaba inútilmente todas las peticiones rápidas de requests. Ahora, cuando la aplicación lanza múltiples peticiones requests a través de asyncio.to_thread, estas se ejecutan de manera concurrente en el thread pool de Python, mejorando la velocidad de la "ruta rápida" del scraping.
+---
 
-3. Reducción de la Latencia del Peor Caso (Playwright)
+### 2.7 `render.yaml` (opcional pero recomendado)
 
-Lo que se hizo: Se redujeron los tiempos de page.wait_for_timeout() dentro de _fetch_nowgoal_html de 4000ms y 1500ms a 2000ms y 1000ms, respectivamente.
+```yaml
+services:
+  - type: web
+    name: mi-flask-scraper
+    env: python
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt && python -m playwright install --with-deps chromium
+    startCommand: |
+      gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120
+    envVars:
+      - key: LOG_LEVEL
+        value: INFO
+      - key: TZ
+        value: UTC
+      - key: RENDER
+        value: "1"
+    healthCheckPath: /healthz
+```
 
-Impacto en la Velocidad: El costo de Playwright es su tiempo de arranque y sus esperas. Al reducir las esperas, se reduce la latencia en el peor de los casos (cuando se necesita el navegador para obtener el contenido), haciendo que la aplicación se sienta más rápida incluso en escenarios complejos.
+---
 
-INSTRUCCIONES DE DESPLIEGUE (Requerido para la Optimización)
+### 2.8 `README.md` (añadir sección “Deploy en Render”)
 
-Para que estas optimizaciones funcionen, la aplicación debe ser ejecutada como un servidor ASGI.
+Incluye exactamente:
 
-Instalar dependencias necesarias:
+**Build Command**
 
-code
-Bash
-download
-content_copy
-expand_less
-pip install gunicorn uvicorn 'flask[async]'
+```
+pip install -r requirements.txt && python -m playwright install --with-deps chromium
+```
 
-Comando de ejecución de alto rendimiento:
+**Start Command**
 
-code
-Bash
-download
-content_copy
-expand_less
-# Ejecuta Gunicorn con 4 workers Uvicorn. Reemplaza '4' por el número de núcleos de tu CPU.
-gunicorn -w 4 -k uvicorn.workers.UvicornWorker app:app
+```
+gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120
+```
+
+**Health check path:** `/healthz`
+**Env vars sugeridas:** `LOG_LEVEL=INFO`, `TZ=UTC`, `RENDER=1`
+
+**Notas:**
+
+* `--with-deps` instala paquetes de sistema para Chromium.
+* Playwright se lanza con `--no-sandbox --disable-dev-shm-usage`.
+* Si el origen bloquea IPs de datacenter, incluso con Playwright puede no aparecer la tabla. Es comportamiento del sitio (sin workarounds de evasión).
+
+---
+
+## 3) Aceptación / pruebas (obligatorio)
+
+1. **Local**:
+
+   ```bash
+   pip install -r requirements.txt
+   python -m playwright install chromium
+   gunicorn app:app --bind 127.0.0.1:8080 --workers 1 --threads 8 --timeout 120
+   curl http://127.0.0.1:8080/healthz
+   curl http://127.0.0.1:8080/debug
+   ```
+
+   * `/debug` debe mostrar `has_rows: true` con `method: "requests"` o, si falla, con `"playwright"`.
+2. **Render**:
+
+   * Logs deben mostrar que arranca gunicorn sin `app.run()`.
+   * `/healthz` responde 200.
+   * `/debug` devuelve `has_rows: true` (o, si el sitio bloquea, al menos `len` significativo con método `"playwright"`).
+   * La **tabla** carga con Hora/Partido/Hándicap/Línea de Goles como en local.
+3. **Regresión**:
+
+   * Los módulos `analisis_avanzado.py`, `analisis_reciente.py`, `analisis_rivales.py`, `estudio_scraper.py` **siguen pudiendo importar y usar** `parse_ah_to_number_of`, `format_ah_as_decimal_string_of`, `check_handicap_cover` desde `utils.py` **con las mismas firmas**.
+   * Ninguna ruta existente cambia su URL ni su firma.
+
+**Devuélveme**:
+
+* Archivos finales completos.
+* *Diff* claro por archivo (qué añadiste/quitaste).
+* Confirmación de que los tests de aceptación anteriores pasan localmente.
+
+> No incluyas técnicas para evadir bloqueos del sitio. Si el origen bloquea la IP de datacenter, documenta el comportamiento y sugiere API oficial como alternativa.
+
+---
+
+**Fin del prompt.**

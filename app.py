@@ -1,432 +1,177 @@
 # app.py - Servidor web principal (Flask)
-from flask import Flask, render_template, abort, request
-try:
-    from uvicorn.middleware.wsgi import WSGIMiddleware
-except ImportError:
-    WSGIMiddleware = None
-
-import asyncio
-from bs4 import BeautifulSoup
-import datetime
-import re
-import math
+import logging
+import os
 import threading
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
-# ¡Importante! Importa tu nuevo módulo de scraping
+from flask import Flask, abort, jsonify, render_template, request
+
 from modules.estudio_scraper import (
-    obtener_datos_completos_partido, 
-    format_ah_as_decimal_string_of, 
-    obtener_datos_preview_rapido, 
-    obtener_datos_preview_ligero, 
     generar_analisis_mercado_simplificado,
-    check_handicap_cover,
-    parse_ah_to_number_of
+    obtener_datos_completos_partido,
+    obtener_datos_preview_ligero,
+    obtener_datos_preview_rapido,
 )
-from flask import jsonify # Asegúrate de que jsonify está importado
+from modules.utils import (
+    check_handicap_cover,
+    format_ah_as_decimal_string_of,
+    normalize_handicap_to_half_bucket_str,
+    parse_ah_to_number_of,
+)
+from scraper_partidos import (
+    TARGET_URL,
+    fetch_with_requests,
+    fetch_html_via_playwright_sync,
+    get_finished_matches,
+    get_upcoming_matches,
+    html_has_rows,
+)
+
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger("app")
 
 app = Flask(__name__)
-if WSGIMiddleware is not None:
-    asgi_app = WSGIMiddleware(app)
-else:
-    async def asgi_app(scope, receive, send):
-        raise RuntimeError("uvicorn.middleware.wsgi no está disponible; instala uvicorn[standard] para usar ASGI")
 
 
-# --- Mantén tu lógica para la página principal ---
-URL_NOWGOAL = "https://live20.nowgoal25.com/"
-
-REQUEST_TIMEOUT_SECONDS = 12
-_REQUEST_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-    "Connection": "keep-alive",
-    "Referer": URL_NOWGOAL,
-}
-
-_requests_session = None
-_requests_session_lock = threading.Lock()
+def _build_handicap_options(matches):
+    buckets = {
+        match.get("handicap_bucket")
+        or normalize_handicap_to_half_bucket_str(match.get("handicap"))
+        for match in matches
+    }
+    return sorted(
+        (bucket for bucket in buckets if bucket is not None),
+        key=lambda x: float(x),
+    )
 
 
-def _build_nowgoal_url(path: str | None = None) -> str:
-    if not path:
-        return URL_NOWGOAL
-    base = URL_NOWGOAL.rstrip('/')
-    suffix = path.lstrip('/')
-    return f"{base}/{suffix}"
-
-
-def _get_shared_requests_session():
-    global _requests_session
-    with _requests_session_lock:
-        if _requests_session is None:
-            session = requests.Session()
-            retries = Retry(total=3, backoff_factor=0.4, status_forcelist=[500, 502, 503, 504])
-            adapter = HTTPAdapter(max_retries=retries)
-            session.mount("https://", adapter)
-            session.mount("http://", adapter)
-            session.headers.update(_REQUEST_HEADERS)
-            _requests_session = session
-        return _requests_session
-
-
-def _fetch_nowgoal_html_sync(url: str) -> str | None:
-    session = _get_shared_requests_session()
+@app.get("/")
+def index():
     try:
-        response = session.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
-        response.raise_for_status()
-        return response.text
+        logger.info("Recibida petición para Próximos Partidos...")
+        hf = request.args.get("handicap")
+        matches = get_upcoming_matches(handicap_filter=hf)
+        logger.info("Scraper finalizado. %s partidos encontrados.", len(matches))
+        opts = _build_handicap_options(matches)
+        return render_template(
+            "index.html",
+            matches=matches,
+            handicap_filter=hf,
+            handicap_options=opts,
+            page_mode="upcoming",
+            page_title="Próximos Partidos",
+        )
     except Exception as exc:
-        print(f"Error al obtener {url} con requests: {exc}")
-        return None
+        logger.exception("Error en la ruta principal")
+        return render_template(
+            "index.html",
+            matches=[],
+            error=f"No se pudieron cargar los partidos: {exc}",
+            page_mode="upcoming",
+            page_title="Próximos Partidos",
+        )
 
-
-async def _fetch_nowgoal_html(path: str | None = None, filter_state: int | None = None, requests_first: bool = True) -> str | None:
-    target_url = _build_nowgoal_url(path)
-    attempts = 1 if requests_first else 2
-    last_exc: Exception | None = None
-
-    for attempt in range(attempts):
-        try:
-            html_content = await asyncio.to_thread(_fetch_nowgoal_html_sync, target_url)
-            if html_content:
-                if filter_state is not None:
-                    print(f"Aviso: filter_state={filter_state} no se puede aplicar sin Playwright para {target_url}.")
-                return html_content
-        except Exception as exc:
-            last_exc = exc
-            print(f"Error asincronico al cargar {target_url} (intento {attempt + 1}): {exc}")
-
-    if last_exc is not None:
-        print(f"No se pudo obtener contenido de {target_url} tras {attempts} intento(s).")
-    return None
-
-def _parse_number_clean(s: str):
-    if s is None:
-        return None
-    txt = str(s).strip()
-    txt = txt.replace('−', '-')  # unicode minus
-    txt = txt.replace(',', '.')
-    txt = txt.replace('+', '')
-    txt = txt.replace(' ', '')
-    m = re.search(r"^[+-]?\d+(?:\.\d+)?$", txt)
-    if m:
-        try:
-            return float(m.group(0))
-        except ValueError:
-            return None
-    return None
-
-def _parse_number(s: str):
-    if s is None:
-        return None
-    # Normaliza separadores y signos
-    txt = str(s).strip()
-    txt = txt.replace('−', '-')  # minus unicode
-    txt = txt.replace(',', '.')
-    txt = txt.replace(' ', '')
-    # Coincide con un número decimal con signo
-    m = re.search(r"^[+-]?\d+(?:\.\d+)?$", txt)
-    if m:
-        try:
-            return float(m.group(0))
-        except ValueError:
-            return None
-    return None
-
-def _parse_handicap_to_float(text: str):
-    if text is None:
-        return None
-    t = str(text).strip()
-    if '/' in t:
-        parts = [p for p in re.split(r"/", t) if p]
-        nums = []
-        for p in parts:
-            v = _parse_number_clean(p)
-            if v is None:
-                return None
-            nums.append(v)
-        if not nums:
-            return None
-        return sum(nums) / len(nums)
-    # Si viene como cadena normal (ej. "+0.25" o "-0,75")
-    return _parse_number_clean(t.replace('+', ''))
-
-def _bucket_to_half(value: float) -> float:
-    if value is None:
-        return None
-    if value == 0:
-        return 0.0
-    sign = -1.0 if value < 0 else 1.0
-    av = abs(value)
-    base = math.floor(av + 1e-9)
-    frac = av - base
-    # Mapea 0.25/0.75/0.5 a .5, 0.0 queda .0
-    def close(a, b):
-        return abs(a - b) < 1e-6
-    if close(frac, 0.0):
-        bucket = float(base)
-    elif close(frac, 0.5) or close(frac, 0.25) or close(frac, 0.75):
-        bucket = base + 0.5
-    else:
-        # fallback: redondeo al múltiplo de 0.5 más cercano
-        bucket = round(av * 2) / 2.0
-        # si cae justo en entero, desplazar a .5 para respetar la preferencia de .25/.75 → .5
-        f = bucket - math.floor(bucket)
-        if close(f, 0.0) and (abs(av - (math.floor(bucket) + 0.25)) < 0.26 or abs(av - (math.floor(bucket) + 0.75)) < 0.26):
-            bucket = math.floor(bucket) + 0.5
-    return sign * bucket
-
-def normalize_handicap_to_half_bucket_str(text: str):
-    v = _parse_handicap_to_float(text)
-    if v is None:
-        return None
-    b = _bucket_to_half(v)
-    if b is None:
-        return None
-    # Formato con un decimal
-    return f"{b:.1f}"
-
-def parse_main_page_matches(html_content, limit=20, offset=0, handicap_filter=None):
-    soup = BeautifulSoup(html_content, 'html.parser')
-    match_rows = soup.find_all('tr', id=lambda x: x and x.startswith('tr1_'))
-    upcoming_matches = []
-    now_utc = datetime.datetime.utcnow()
-
-    for row in match_rows:
-        match_id = row.get('id', '').replace('tr1_', '')
-        if not match_id: continue
-
-        time_cell = row.find('td', {'name': 'timeData'})
-        if not time_cell or not time_cell.has_attr('data-t'): continue
-        
-        try:
-            match_time = datetime.datetime.strptime(time_cell['data-t'], '%Y-%m-%d %H:%M:%S')
-        except (ValueError, IndexError):
-            continue
-
-        if match_time < now_utc: continue
-
-        home_team_tag = row.find('a', {'id': f'team1_{match_id}'})
-        away_team_tag = row.find('a', {'id': f'team2_{match_id}'})
-        odds_data = row.get('odds', '').split(',')
-        handicap = odds_data[2] if len(odds_data) > 2 else "N/A"
-        goal_line = odds_data[10] if len(odds_data) > 10 else "N/A"
-
-        if handicap == "N/A":
-            continue
-
-
-        upcoming_matches.append({
-            "id": match_id,
-            "time_obj": match_time,
-            "home_team": home_team_tag.text.strip() if home_team_tag else "N/A",
-            "away_team": away_team_tag.text.strip() if away_team_tag else "N/A",
-            "handicap": handicap,
-            "goal_line": goal_line
-        })
-
-    if handicap_filter:
-        try:
-            target = normalize_handicap_to_half_bucket_str(handicap_filter)
-            if target is not None:
-                filtered = []
-                for m in upcoming_matches:
-                    hv = normalize_handicap_to_half_bucket_str(m.get('handicap', ''))
-                    if hv == target:
-                        filtered.append(m)
-                upcoming_matches = filtered
-        except Exception:
-            pass
-
-    upcoming_matches.sort(key=lambda x: x['time_obj'])
-    
-    paginated_matches = upcoming_matches[offset:offset+limit]
-
-    for match in paginated_matches:
-        match['time'] = (match['time_obj'] + datetime.timedelta(hours=2)).strftime('%H:%M')
-        del match['time_obj']
-
-    return paginated_matches
-
-def parse_main_page_finished_matches(html_content, limit=20, offset=0, handicap_filter=None):
-    soup = BeautifulSoup(html_content, 'html.parser')
-    match_rows = soup.find_all('tr', id=lambda x: x and x.startswith('tr1_'))
-    finished_matches = []
-    for row in match_rows:
-        match_id = row.get('id', '').replace('tr1_', '')
-        if not match_id: continue
-
-        state = row.get('state')
-        if state is not None and state != "-1":
-            continue
-
-        cells = row.find_all('td')
-        if len(cells) < 8: continue
-
-        home_team_tag = row.find('a', {'id': f'team1_{match_id}'})
-        away_team_tag = row.find('a', {'id': f'team2_{match_id}'})
-        
-        score_cell = cells[6]
-        score_text = "N/A"
-        if score_cell:
-            b_tag = score_cell.find('b')
-            if b_tag:
-                score_text = b_tag.text.strip()
-            else:
-                score_text = score_cell.get_text(strip=True)
-
-        if not re.match(r'^\d+\s*-\s*\d+$', score_text):
-            continue
-
-        odds_data = row.get('odds', '').split(',')
-        handicap = odds_data[2] if len(odds_data) > 2 else "N/A"
-        goal_line = odds_data[10] if len(odds_data) > 10 else "N/A"
-
-        if handicap == "N/A":
-            continue
-
-        time_cell = row.find('td', {'name': 'timeData'})
-        match_time = datetime.datetime.now()
-        if time_cell and time_cell.has_attr('data-t'):
-            try:
-                match_time = datetime.datetime.strptime(time_cell['data-t'], '%Y-%m-%d %H:%M:%S')
-            except (ValueError, IndexError):
-                continue
-        
-        finished_matches.append({
-            "id": match_id,
-            "time_obj": match_time,
-            "home_team": home_team_tag.text.strip() if home_team_tag else "N/A",
-            "away_team": away_team_tag.text.strip() if away_team_tag else "N/A",
-            "score": score_text,
-            "handicap": handicap,
-            "goal_line": goal_line
-        })
-
-    if handicap_filter:
-        try:
-            target = normalize_handicap_to_half_bucket_str(handicap_filter)
-            if target is not None:
-                filtered = []
-                for m in finished_matches:
-                    hv = normalize_handicap_to_half_bucket_str(m.get('handicap', ''))
-                    if hv == target:
-                        filtered.append(m)
-                finished_matches = filtered
-        except Exception:
-            pass
-
-    finished_matches.sort(key=lambda x: x['time_obj'], reverse=True)
-    
-    paginated_matches = finished_matches[offset:offset+limit]
-
-    for match in paginated_matches:
-        match['time'] = (match['time_obj'] + datetime.timedelta(hours=2)).strftime('%d/%m %H:%M')
-        del match['time_obj']
-
-    return paginated_matches
-
-async def get_main_page_matches_async(limit=20, offset=0, handicap_filter=None):
-    html_content = await _fetch_nowgoal_html(filter_state=3)
-    if not html_content:
-        html_content = await _fetch_nowgoal_html(filter_state=3, requests_first=False)
-        if not html_content:
-            return []
-    matches = parse_main_page_matches(html_content, limit, offset, handicap_filter)
-    if not matches:
-        html_content = await _fetch_nowgoal_html(filter_state=3, requests_first=False)
-        if not html_content:
-            return []
-        matches = parse_main_page_matches(html_content, limit, offset, handicap_filter)
-    return matches
-
-async def get_main_page_finished_matches_async(limit=20, offset=0, handicap_filter=None):
-    html_content = await _fetch_nowgoal_html(path='football/results')
-    if not html_content:
-        html_content = await _fetch_nowgoal_html(path='football/results', requests_first=False)
-        if not html_content:
-            return []
-    matches = parse_main_page_finished_matches(html_content, limit, offset, handicap_filter)
-    if not matches:
-        html_content = await _fetch_nowgoal_html(path='football/results', requests_first=False)
-        if not html_content:
-            return []
-        matches = parse_main_page_finished_matches(html_content, limit, offset, handicap_filter)
-    return matches
-
-@app.route('/')
-async def index():
+@app.get("/resultados")
+def resultados():
     try:
-        print("Recibida petición para Próximos Partidos...")
-        hf = request.args.get('handicap')
-        matches = await get_main_page_matches_async(handicap_filter=hf)
-        print(f"Scraper finalizado. {len(matches)} partidos encontrados.")
-        opts = sorted({
-            normalize_handicap_to_half_bucket_str(m.get('handicap'))
-            for m in matches if normalize_handicap_to_half_bucket_str(m.get('handicap')) is not None
-        }, key=lambda x: float(x))
-        return render_template('index.html', matches=matches, handicap_filter=hf, handicap_options=opts, page_mode='upcoming', page_title='Próximos Partidos')
-    except Exception as e:
-        print(f"ERROR en la ruta principal: {e}")
-        return render_template('index.html', matches=[], error=f"No se pudieron cargar los partidos: {e}", page_mode='upcoming', page_title='Próximos Partidos')
+        logger.info("Recibida petición para Partidos Finalizados...")
+        hf = request.args.get("handicap")
+        matches = get_finished_matches(handicap_filter=hf)
+        logger.info("Scraper finalizado. %s partidos encontrados.", len(matches))
+        opts = _build_handicap_options(matches)
+        return render_template(
+            "index.html",
+            matches=matches,
+            handicap_filter=hf,
+            handicap_options=opts,
+            page_mode="finished",
+            page_title="Resultados Finalizados",
+        )
+    except Exception as exc:
+        logger.exception("Error en la ruta de resultados")
+        return render_template(
+            "index.html",
+            matches=[],
+            error=f"No se pudieron cargar los partidos: {exc}",
+            page_mode="finished",
+            page_title="Resultados Finalizados",
+        )
 
-@app.route('/resultados')
-async def resultados():
+@app.get("/api/matches")
+def api_matches():
     try:
-        print("Recibida petición para Partidos Finalizados...")
-        hf = request.args.get('handicap')
-        matches = await get_main_page_finished_matches_async(handicap_filter=hf)
-        print(f"Scraper finalizado. {len(matches)} partidos encontrados.")
-        opts = sorted({
-            normalize_handicap_to_half_bucket_str(m.get('handicap'))
-            for m in matches if normalize_handicap_to_half_bucket_str(m.get('handicap')) is not None
-        }, key=lambda x: float(x))
-        return render_template('index.html', matches=matches, handicap_filter=hf, handicap_options=opts, page_mode='finished', page_title='Resultados Finalizados')
-    except Exception as e:
-        print(f"ERROR en la ruta de resultados: {e}")
-        return render_template('index.html', matches=[], error=f"No se pudieron cargar los partidos: {e}", page_mode='finished', page_title='Resultados Finalizados')
+        offset = max(int(request.args.get("offset", 0)), 0)
+        limit = min(int(request.args.get("limit", 5)), 50)
+        matches = get_upcoming_matches(
+            limit=limit,
+            offset=offset,
+            handicap_filter=request.args.get("handicap"),
+        )
+        return jsonify({"matches": matches})
+    except Exception as exc:
+        logger.exception("Error en /api/matches")
+        return jsonify({"error": str(exc)}), 500
 
-@app.route('/api/matches')
-async def api_matches():
-    try:
-        offset = int(request.args.get('offset', 0))
-        limit = int(request.args.get('limit', 5))
-        limit = min(limit, 50)
-        matches = await get_main_page_matches_async(limit, offset, request.args.get('handicap'))
-        return jsonify({'matches': matches})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/finished_matches')
-async def api_finished_matches():
+@app.get("/api/finished_matches")
+def api_finished_matches():
     try:
-        offset = int(request.args.get('offset', 0))
-        limit = int(request.args.get('limit', 5))
-        limit = min(limit, 50)
-        matches = await get_main_page_finished_matches_async(limit, offset, request.args.get('handicap'))
-        return jsonify({'matches': matches})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        offset = max(int(request.args.get("offset", 0)), 0)
+        limit = min(int(request.args.get("limit", 5)), 50)
+        matches = get_finished_matches(
+            limit=limit,
+            offset=offset,
+            handicap_filter=request.args.get("handicap"),
+        )
+        return jsonify({"matches": matches})
+    except Exception as exc:
+        logger.exception("Error en /api/finished_matches")
+        return jsonify({"error": str(exc)}), 500
 
-@app.route('/proximos')
-async def proximos():
+
+@app.get("/healthz")
+def healthz():
+    return jsonify({"status": "ok"}), 200
+
+
+@app.get("/debug")
+def debug():
     try:
-        print("Recibida petición. Ejecutando scraper de partidos...")
-        hf = request.args.get('handicap')
-        matches = await get_main_page_matches_async(25, 0, hf)
-        print(f"Scraper finalizado. {len(matches)} partidos encontrados.")
-        opts = sorted({
-            normalize_handicap_to_half_bucket_str(m.get('handicap'))
-            for m in matches if normalize_handicap_to_half_bucket_str(m.get('handicap')) is not None
-        }, key=lambda x: float(x))
-        return render_template('index.html', matches=matches, handicap_filter=hf, handicap_options=opts)
-    except Exception as e:
-        print(f"ERROR en la ruta principal: {e}")
-        return render_template('index.html', matches=[], error=f"No se pudieron cargar los partidos: {e}")
+        html = fetch_with_requests(TARGET_URL, timeout=20)
+        info = {
+            "method": "requests",
+            "status": "ok",
+            "len": len(html or ""),
+            "has_rows": bool(html and html_has_rows(html)),
+        }
+        if not info["has_rows"]:
+            html2 = fetch_html_via_playwright_sync(TARGET_URL, timeout_ms=20_000)
+            info.update({
+                "method": "playwright",
+                "len": len(html2 or ""),
+                "has_rows": bool(html2 and html_has_rows(html2)),
+            })
+        return jsonify(info), 200
+    except Exception as exc:
+        logger.exception("debug error")
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.get("/proximos")
+def proximos():
+    try:
+        logger.info("Recibida petición. Ejecutando scraper de partidos...")
+        hf = request.args.get("handicap")
+        matches = get_upcoming_matches(limit=25, handicap_filter=hf)
+        logger.info("Scraper finalizado. %s partidos encontrados.", len(matches))
+        opts = _build_handicap_options(matches)
+        return render_template("index.html", matches=matches, handicap_filter=hf, handicap_options=opts)
+    except Exception as exc:
+        logger.exception("Error en la ruta proximos")
+        return render_template("index.html", matches=[], error=f"No se pudieron cargar los partidos: {exc}")
 
 # --- NUEVA RUTA PARA MOSTRAR EL ESTUDIO DETALLADO ---
 @app.route('/estudio/<string:match_id>')
@@ -434,18 +179,22 @@ def mostrar_estudio(match_id):
     """
     Esta ruta se activa cuando un usuario visita /estudio/ID_DEL_PARTIDO.
     """
-    print(f"Recibida petición para el estudio del partido ID: {match_id}")
+    logger.info("Recibida petición para el estudio del partido ID: %s", match_id)
     
     # Llama a la función principal de tu módulo de scraping
     datos_partido = obtener_datos_completos_partido(match_id)
     
     if not datos_partido or "error" in datos_partido:
         # Si hay un error, puedes mostrar una página de error
-        print(f"Error al obtener datos para {match_id}: {datos_partido.get('error')}")
+        logger.error("Error al obtener datos para %s: %s", match_id, datos_partido.get('error'))
         abort(500, description=datos_partido.get('error', 'Error desconocido'))
 
     # Si todo va bien, renderiza la plantilla HTML pasándole los datos
-    print(f"Datos obtenidos para {datos_partido['home_name']} vs {datos_partido['away_name']}. Renderizando plantilla...")
+    logger.info(
+        "Datos obtenidos para %s vs %s. Renderizando plantilla...",
+        datos_partido['home_name'],
+        datos_partido['away_name'],
+    )
     return render_template('estudio.html', data=datos_partido, format_ah=format_ah_as_decimal_string_of)
 
 # --- NUEVA RUTA PARA ANALIZAR PARTIDOS FINALIZADOS ---
@@ -457,14 +206,14 @@ def analizar_partido():
     if request.method == 'POST':
         match_id = request.form.get('match_id')
         if match_id:
-            print(f"Recibida petición para analizar partido finalizado ID: {match_id}")
+            logger.info("Recibida petición para analizar partido finalizado ID: %s", match_id)
             
             # Llama a la función principal de tu módulo de scraping
             datos_partido = obtener_datos_completos_partido(match_id)
             
             if not datos_partido or "error" in datos_partido:
                 # Si hay un error, mostrarlo en la página
-                print(f"Error al obtener datos para {match_id}: {datos_partido.get('error')}")
+                logger.error("Error al obtener datos para %s: %s", match_id, datos_partido.get('error'))
                 return render_template('analizar_partido.html', error=datos_partido.get('error', 'Error desconocido'))
             
             # --- ANÁLISIS SIMPLIFICADO ---
@@ -479,7 +228,11 @@ def analizar_partido():
                 analisis_simplificado_html = generar_analisis_mercado_simplificado(main_odds, h2h_data, home_name, away_name)
 
             # Si todo va bien, renderiza la plantilla HTML pasándole los datos
-            print(f"Datos obtenidos para {datos_partido['home_name']} vs {datos_partido['away_name']}. Renderizando plantilla...")
+            logger.info(
+                "Datos obtenidos para %s vs %s. Renderizando plantilla...",
+                datos_partido['home_name'],
+                datos_partido['away_name'],
+            )
             return render_template('estudio.html', 
                                    data=datos_partido, 
                                    format_ah=format_ah_as_decimal_string_of,
@@ -508,7 +261,7 @@ def api_preview(match_id):
             return jsonify(preview_data), 500
         return jsonify(preview_data)
     except Exception as e:
-        print(f"Error en la ruta /api/preview/{match_id}: {e}")
+        logger.exception("Error en la ruta /api/preview/%s", match_id)
         return jsonify({'error': 'Ocurrió un error interno en el servidor.'}), 500
 
 
@@ -745,7 +498,7 @@ def api_analisis(match_id):
         return jsonify(payload)
 
     except Exception as e:
-        print(f"Error en la ruta /api/analisis/{match_id}: {e}")
+        logger.exception("Error en la ruta /api/analisis/%s", match_id)
         return jsonify({'error': 'Ocurrió un error interno en el servidor.'}), 500
 
 @app.route('/start_analysis_background', methods=['POST'])
@@ -756,18 +509,18 @@ def start_analysis_background():
 
     def analysis_worker(app, match_id):
         with app.app_context():
-            print(f"Iniciando análisis en segundo plano para el ID: {match_id}")
+            logger.info("Iniciando análisis en segundo plano para el ID: %s", match_id)
             try:
                 obtener_datos_completos_partido(match_id)
-                print(f"Análisis en segundo plano finalizado para el ID: {match_id}")
+                logger.info("Análisis en segundo plano finalizado para el ID: %s", match_id)
             except Exception as e:
-                print(f"Error en el hilo de análisis para el ID {match_id}: {e}")
+                logger.exception("Error en el hilo de análisis para el ID %s", match_id)
 
     thread = threading.Thread(target=analysis_worker, args=(app, match_id))
     thread.start()
 
     return jsonify({'status': 'success', 'message': f'Análisis iniciado para el partido {match_id}'})
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True) # debug=True es útil para desarrollar
-
+if __name__ == "__main__":
+    # Solo para desarrollo local:
+    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "8080")), debug=True)

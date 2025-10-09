@@ -41,26 +41,35 @@ def get_match_details_from_row_of(row_element, score_class_selector='score', sou
 
 def parse_ah_to_number_of(ah_line_str: str):
     """Convierte una línea de handicap asiático de string a número."""
-    if not isinstance(ah_line_str, str): 
+    if not isinstance(ah_line_str, str):
         return None
     s = ah_line_str.strip().replace(' ', '')
-    if not s or s in ['-', '?']: 
+    if not s or s in ['-', '?']:
         return None
-        
+
+    original_starts_with_minus = ah_line_str.strip().startswith('-')
+
     try:
         if '/' in s:
             parts = s.split('/')
-            if len(parts) != 2: 
+            if len(parts) != 2:
                 return None
             p1_str, p2_str = parts[0], parts[1]
             val1 = float(p1_str)
             val2 = float(p2_str)
             # Ajustar signo para fracciones mixtas
-            if val1 < 0 and val2 > 0:
+            if val1 < 0 and val2 > 0 and not p2_str.startswith('-'):
+                val2 = -abs(val2)
+            elif (
+                original_starts_with_minus
+                and val1 == 0.0
+                and p1_str in {"0", "-0"}
+                and not p2_str.startswith('-')
+                and val2 > 0
+            ):
                 val2 = -abs(val2)
             return (val1 + val2) / 2.0
-        else:
-            return float(s)
+        return float(s)
     except (ValueError, IndexError):
         return None
 
@@ -98,8 +107,59 @@ def format_ah_as_decimal_string_of(ah_line_str: str, for_sheets=False):
         output_str = str(int(final_value))
     else:
         output_str = f"{final_value:.2f}".rstrip('0').rstrip('.')
-        
+
     return output_str
+
+
+def normalize_handicap_to_half_bucket(value) -> float | None:
+    """
+    Normaliza una línea AH al bucket más cercano de 0.5 manteniendo el signo.
+    Agrupa automáticamente fracciones de 0.25 y 0.75 como 0.5 para facilitar filtros.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        numeric_value = parse_ah_to_number_of(value)
+    else:
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return None
+
+    if numeric_value is None:
+        return None
+    if numeric_value == 0:
+        return 0.0
+
+    sign = -1.0 if numeric_value < 0 else 1.0
+    abs_val = abs(numeric_value)
+    base = math.floor(abs_val + 1e-9)
+    frac = abs_val - base
+
+    def close(a, b):
+        return abs(a - b) < 1e-6
+
+    if close(frac, 0.0):
+        bucket = float(base)
+    elif any(close(frac, candidate) for candidate in (0.25, 0.5, 0.75)):
+        bucket = base + 0.5
+    else:
+        bucket = round(abs_val * 2) / 2.0
+        frac_bucket = bucket - math.floor(bucket)
+        if close(frac_bucket, 0.0) and (
+            abs(abs_val - (math.floor(bucket) + 0.25)) < 0.26
+            or abs(abs_val - (math.floor(bucket) + 0.75)) < 0.26
+        ):
+            bucket = math.floor(bucket) + 0.5
+
+    return sign * bucket
+
+
+def normalize_handicap_to_half_bucket_str(value) -> str | None:
+    bucket = normalize_handicap_to_half_bucket(value)
+    if bucket is None:
+        return None
+    return f"{bucket:.1f}"
 
 def check_handicap_cover(resultado_raw: str, ah_line_num: float, favorite_team_name: str, 
                         home_team_in_h2h: str, away_team_in_h2h: str, main_home_team_name: str):

@@ -1,0 +1,99 @@
+Haz todo esto en el directorio de copia de seguridad:
+
+Deberas eliminar el apartado **H2H general** de la función del botón del ojo (`<i class="fa-solid fa-eye"></i>`), sigue estos pasos claros:
+
+---
+
+### **1. Identifica la función JavaScript del botón**
+El botón con clase `preview-btn` tiene un evento asociado (probablemente un `click`) que muestra la vista previa. Debes encontrar esa función en tu código JavaScript.  
+**Ejemplo de cómo podría verse:**
+```javascript
+document.querySelectorAll('.preview-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        // Código que muestra la ventana emergente con datos del partido
+    });
+});
+```
+
+---
+
+### **2. Localiza dónde se carga el contenido del H2H**
+Dentro de la función del botón, busca cómo se obtienen o renderizan los datos del H2H. Puede ser:
+- Una llamada a una API que incluye el H2H.
+- Un elemento HTML oculto que se clona y muestra.
+- Datos hardcodeados en el JavaScript.
+
+**Ejemplo hipotético de llamada a API:**
+```javascript
+fetch(`/api/match/${this.dataset.matchId}`)
+    .then(response => response.json())
+    .then(data => {
+        // Aquí 'data.h2h' contiene los datos del H2H
+        // Elimina esta parte para quitarlo
+    });
+```
+
+---
+
+### **3. Modifica el código para excluir el H2H**
+**Opción A: Si el H2H se obtiene de una API:**
+- **Elimina el campo `h2h`** de la respuesta de la API antes de mostrarlo.  
+  **Ejemplo:**
+  ```javascript
+  fetch(`/api/match/${this.dataset.matchId}`)
+      .then(response => response.json())
+      .then(data => {
+          // Eliminar el H2H del objeto de datos
+          delete data.h2h;
+          // Renderizar el resto de datos...
+      });
+  ```
+
+**Opción B: Si el H2H está en HTML:**
+- **Quita el elemento HTML correspondiente** del template que se muestra en la vista previa.  
+  **Ejemplo:**
+  ```html
+  <!-- Elimina este div si está presente -->
+  <div class="h2h-section">
+      <h3>H2H Riales (Col3)</h3>
+      <p>2 - 2</p>
+      <!-- Otros datos de H2H -->
+  </div>
+  ```
+
+---
+
+### **4. Verifica en la interfaz**
+Después de modificar el código:
+1. Haz clic en el botón del ojo (`<i class="fa-solid fa-eye"></i>`) en la página.
+2. Confirma que la ventana de vista previa **no muestra el apartado H2H**.
+
+---
+
+### **5. Ejemplo final del HTML modificado**
+Si el H2H estaba en HTML, tu tabla quedaría así:
+```html
+<td class="align-middle">
+    <span class="preview-btn" data-match-id="2826192" title="Ver vista previa rápida">
+        <i class="fa-solid fa-eye"></i>
+    </span>
+</td>
+
+<!-- Resto de la fila sin el apartado H2H -->
+<div class="match-preview">
+    <!-- Datos del partido, pero SIN H2H -->
+    <div class="team-stats">
+        <!-- Estadísticas de los equipos -->
+    </div>
+    <div class="market-analysis">
+        <!-- Análisis de mercado -->
+    </div>
+</div>
+```
+
+---
+
+### **Consejo adicional:**
+Si usas un framework como React, Vue o Angular, asegúrate de que el componente de vista previa **no renderiza el H2H** al hacer `return ()`.
+
+¡Listo! Con estos pasos, el botón del ojo mostrará la vista previa sin el apartado H2H. 🛠️👁️
