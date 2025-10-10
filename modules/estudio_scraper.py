@@ -3,182 +3,131 @@ from modules.analisis_avanzado import generar_analisis_comparativas_indirectas
 from modules.analisis_reciente import analizar_rendimiento_reciente_con_handicap, comparar_lineas_handicap_recientes
 from modules.analisis_rivales import analizar_rivales_comunes, analizar_contra_rival_del_rival
 from modules.funciones_resumen import generar_resumen_rendimiento_reciente
-from modules.funciones_auxiliares import (
-    _calcular_estadisticas_contra_rival,
-    _analizar_over_under,
-    _analizar_ah_cubierto,
-    _analizar_desempeno_casa_fuera,
-)
-import logging
-import math
-import re
+from modules.funciones_auxiliares import _calcular_estadisticas_contra_rival, _analizar_over_under, _analizar_ah_cubierto, _analizar_desempeno_casa_fuera
 import time
-import threading
-from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
-
-import pandas as pd
-import requests
+import re
+import math
 from bs4 import BeautifulSoup
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
+import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait, Select
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, WebDriverException
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from modules.utils import (
-    check_goal_line_cover,
-    check_handicap_cover,
-    extract_final_score_of,
-    format_ah_as_decimal_string_of,
-    get_match_details_from_row_of,
-    parse_ah_to_number_of,
-)
-
-logger = logging.getLogger(__name__)
+from modules.utils import parse_ah_to_number_of, format_ah_as_decimal_string_of, check_handicap_cover, check_goal_line_cover, get_match_details_from_row_of, extract_final_score_of
 
 BASE_URL_OF = "https://live18.nowgoal25.com"
-PLAYWRIGHT_TIMEOUT_MS = 20_000
-PLAYWRIGHT_ARGS = [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage",
-    "--disable-gpu",
-    "--disable-background-networking",
-    "--disable-background-timer-throttling",
-    "--disable-renderer-backgrounding",
-]
-PLAYWRIGHT_VIEWPORT = {"width": 1280, "height": 720}
-UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/120.0.0.0 Safari/537.36"
-)
-REQUEST_HEADERS = {
-    "User-Agent": UA,
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-    "Connection": "keep-alive",
-    "Referer": BASE_URL_OF,
-}
+SELENIUM_TIMEOUT_SECONDS_OF = 10
 PLACEHOLDER_NODATA = "*(No disponible)*"
 
-_REQUESTS_SESSION_LOCK = threading.Lock()
-_REQUESTS_SESSION: Optional[requests.Session] = None
-
-
-def _get_requests_session() -> requests.Session:
-    global _REQUESTS_SESSION
-    with _REQUESTS_SESSION_LOCK:
-        if _REQUESTS_SESSION is None:
-            session = requests.Session()
-            retries = Retry(total=3, backoff_factor=0.4, status_forcelist=[500, 502, 503, 504])
-            adapter = HTTPAdapter(max_retries=retries)
-            session.mount("https://", adapter)
-            session.mount("http://", adapter)
-            session.headers.update(REQUEST_HEADERS)
-            _REQUESTS_SESSION = session
-        return _REQUESTS_SESSION
-
-
-def _fetch_with_requests(url: str, timeout: int = 20) -> Optional[str]:
+def parse_ah_to_number_of(ah_line_str: str):
+    if not isinstance(ah_line_str, str): return None
+    s = ah_line_str.strip().replace(' ', '')
+    if not s or s in ['-', '?']: return None
+    original_starts_with_minus = ah_line_str.strip().startswith('-')
     try:
-        response = _get_requests_session().get(url, timeout=timeout)
-        response.raise_for_status()
-        return response.text
-    except Exception as exc:
-        logger.debug("requests falló para %s: %s", url, exc)
+        if '/' in s:
+            parts = s.split('/')
+            if len(parts) != 2: return None
+            p1_str, p2_str = parts[0], parts[1]
+            val1 = float(p1_str)
+            val2 = float(p2_str)
+            if val1 < 0 and not p2_str.startswith('-') and val2 > 0:
+                 val2 = -abs(val2)
+            elif original_starts_with_minus and val1 == 0.0 and \
+                 (p1_str == "0" or p1_str == "-0") and \
+                 not p2_str.startswith('-') and val2 > 0:
+                val2 = -abs(val2)
+            return (val1 + val2) / 2.0
+        else:
+            return float(s)
+    except (ValueError, IndexError):
         return None
 
+def format_ah_as_decimal_string_of(ah_line_str: str, for_sheets=False):
+    if not isinstance(ah_line_str, str) or not ah_line_str.strip() or ah_line_str.strip() in ['-', '?']:
+        return ah_line_str.strip() if isinstance(ah_line_str, str) and ah_line_str.strip() in ['-','?'] else '-'
+    numeric_value = parse_ah_to_number_of(ah_line_str)
+    if numeric_value is None:
+        return ah_line_str.strip() if ah_line_str.strip() in ['-','?'] else '-'
+    if numeric_value == 0.0: return "0"
+    sign = -1 if numeric_value < 0 else 1
+    abs_num = abs(numeric_value)
+    mod_val = abs_num % 1
+    if mod_val == 0.0: abs_rounded = abs_num
+    elif mod_val == 0.25: abs_rounded = math.floor(abs_num) + 0.25
+    elif mod_val == 0.5: abs_rounded = abs_num
+    elif mod_val == 0.75: abs_rounded = math.floor(abs_num) + 0.75
+    else:
+        if mod_val < 0.25: abs_rounded = math.floor(abs_num)
+        elif mod_val < 0.75: abs_rounded = math.floor(abs_num) + 0.5
+        else: abs_rounded = math.ceil(abs_num)
+    final_value_signed = sign * abs_rounded
+    if final_value_signed == 0.0: output_str = "0"
+    elif abs(final_value_signed - round(final_value_signed, 0)) < 1e-9 : output_str = str(int(round(final_value_signed, 0)))
+    elif abs(final_value_signed - (math.floor(final_value_signed) + 0.5)) < 1e-9: output_str = f"{final_value_signed:.1f}"
+    elif abs(final_value_signed - (math.floor(final_value_signed) + 0.25)) < 1e-9 or \
+         abs(final_value_signed - (math.floor(final_value_signed) + 0.75)) < 1e-9: output_str = f"{final_value_signed:.2f}".replace(".25", ".25").replace(".75", ".75")
+    else: output_str = f"{final_value_signed:.2f}"
+    if for_sheets:
+        return "'" + output_str.replace('.', ',') if output_str not in ['-','?'] else output_str
+    return output_str
 
-def _fetch_with_playwright(
-    url: str,
-    *,
-    wait_selector: Optional[str] = None,
-    selects: Optional[tuple[str, ...]] = None,
-    timeout_ms: int = PLAYWRIGHT_TIMEOUT_MS,
-) -> Optional[str]:
-    browser = None
-    context = None
+def check_handicap_cover(resultado_raw: str, ah_line_num: float, favorite_team_name: str, home_team_in_h2h: str, away_team_in_h2h: str, main_home_team_name: str):
+    """
+    Simula si un resultado histórico habría cubierto la línea de hándicap actual.
+    Maneja correctamente el Hándicap Asiático 0.
+    """
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True, args=PLAYWRIGHT_ARGS)
-            context = browser.new_context(
-                user_agent=UA,
-                locale="es-ES",
-                timezone_id="UTC",
-                viewport=PLAYWRIGHT_VIEWPORT,
-            )
-            page = context.new_page()
-            page.set_default_timeout(timeout_ms)
-            page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
-            if wait_selector:
-                try:
-                    page.wait_for_selector(wait_selector, timeout=timeout_ms)
-                except PlaywrightTimeoutError:
-                    logger.debug("Selector %s no disponible aún en %s", wait_selector, url)
-            if selects:
-                for select_id in selects:
-                    selector = f"#{select_id}"
-                    try:
-                        page.wait_for_selector(selector, timeout=3000)
-                        page.select_option(selector, value="8")
-                    except PlaywrightTimeoutError:
-                        logger.debug("Select %s no disponible en %s", select_id, url)
-                    except Exception as exc:
-                        logger.debug("Error seleccionando %s en %s: %s", select_id, url, exc)
-                page.wait_for_timeout(800)
-            page.wait_for_timeout(400)
-            return page.content()
-    except Exception as exc:
-        logger.warning("Playwright falló para %s: %s", url, exc)
-        return None
-    finally:
-        if context:
-            try:
-                context.close()
-            except Exception:
-                pass
-        if browser:
-            try:
-                browser.close()
-            except Exception:
-                pass
+        goles_h, goles_a = map(int, resultado_raw.split('-'))
 
+        # --- LÓGICA ESPECIAL PARA HÁNDICAP 0 (DRAW NO BET) ---
+        if ah_line_num == 0.0:
+            # Simulamos la apuesta sobre el equipo local del partido principal
+            if main_home_team_name.lower() == home_team_in_h2h.lower(): # Si nuestro local jugaba de local
+                if goles_h > goles_a: return ("CUBIERTO", True)
+                elif goles_a > goles_h: return ("NO CUBIERTO", False)
+                else: return ("PUSH", None)
+            else: # Si nuestro local jugaba de visitante
+                if goles_a > goles_h: return ("CUBIERTO", True)
+                elif goles_h > goles_a: return ("NO CUBIERTO", False)
+                else: return ("PUSH", None)
+        
+        # --- LÓGICA ANTERIOR PARA HÁNDICAPS CON FAVORITO ---
+        if favorite_team_name.lower() == home_team_in_h2h.lower():
+            favorite_margin = goles_h - goles_a
+        elif favorite_team_name.lower() == away_team_in_h2h.lower():
+            favorite_margin = goles_a - goles_h
+        else:
+            return ("indeterminado", None)
+        
+        if favorite_margin - abs(ah_line_num) > 0.05:
+            return ("CUBIERTO", True)
+        elif favorite_margin - abs(ah_line_num) < -0.05:
+            return ("NO CUBIERTO", False)
+        else:
+            return ("PUSH", None)
 
-def _load_page_soup(
-    url: str,
-    *,
-    wait_selector: Optional[str] = None,
-    selects: Optional[tuple[str, ...]] = None,
-    timeout_ms: int = PLAYWRIGHT_TIMEOUT_MS,
-) -> Optional[BeautifulSoup]:
-    html = _fetch_with_playwright(
-        url,
-        wait_selector=wait_selector,
-        selects=selects,
-        timeout_ms=timeout_ms,
-    )
-    if not html:
-        html = _fetch_with_requests(url)
-    if not html:
-        return None
-    return BeautifulSoup(html, "lxml")
+    except (ValueError, TypeError, AttributeError):
+        return ("indeterminado", None)
 
-
-def _load_main_match_soup(match_id: str) -> Optional[BeautifulSoup]:
-    return _load_page_soup(
-        url,
-        wait_selector="#table_v1",
-        selects=("hSelect_1", "hSelect_2", "hSelect_3"),
-    )
-
-
-def _load_h2h_column_soup(key_match_id: str) -> Optional[BeautifulSoup]:
-    url = f"{BASE_URL_OF}/match/h2h-{key_match_id}"
-    return _load_page_soup(
-        url,
-        wait_selector="#table_v2",
-        selects=("hSelect_2",),
-    )
-
+def check_goal_line_cover(resultado_raw: str, goal_line_num: float):
+    try:
+        goles_h, goles_a = map(int, resultado_raw.split('-'))
+        total_goles = goles_h + goles_a
+        if total_goles > goal_line_num:
+            return ("SUPERADA (Over)", True)
+        elif total_goles < goal_line_num:
+            return (f"<span style='color: red; font-weight: bold;'>NO SUPERADA (UNDER) </span>", False)
+        else:
+            return ("PUSH (Igual)", None)
+    except (ValueError, TypeError):
+        return ("indeterminado", None)
 
 def _analizar_precedente_handicap(precedente_data, ah_actual_num, favorito_actual_name, main_home_team_name):
     """
@@ -566,24 +515,23 @@ def get_rival_b_for_original_h2h_of(soup, league_id=None):
                 return key_id, rival_id_match.group(1), rival_tag.text.strip()
     return None, None, None
 
-def get_h2h_details_for_original_logic_of(
-    key_match_id,
-    rival_a_id,
-    rival_b_id,
-    rival_a_name="Rival A",
-    rival_b_name="Rival B",
-):
-    if not all([key_match_id, rival_a_id, rival_b_id]):
+def get_h2h_details_for_original_logic_of(driver, key_match_id, rival_a_id, rival_b_id, rival_a_name="Rival A", rival_b_name="Rival B"):
+    if not all([driver, key_match_id, rival_a_id, rival_b_id]):
         return {"status": "error", "resultado": "N/A (Datos incompletos para H2H)"}
-
-    soup = _load_h2h_column_soup(str(key_match_id))
-    if soup is None:
-        return {"status": "error", "resultado": "N/A (No se pudo cargar H2H col3)"}
-
-    table = soup.find("table", id="table_v2")
-    if not table:
+    url = f"{BASE_URL_OF}/match/h2h-{key_match_id}"
+    try:
+        driver.get(url)
+        WebDriverWait(driver, SELENIUM_TIMEOUT_SECONDS_OF).until(EC.presence_of_element_located((By.ID, "table_v2")))
+        try:
+            select = Select(WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, "hSelect_2"))))
+            select.select_by_value("8")
+            time.sleep(0.5)
+        except TimeoutException: pass
+        soup = BeautifulSoup(driver.page_source, "lxml")
+    except Exception as e:
+        return {"status": "error", "resultado": f"N/A (Error Selenium en H2H Col3: {type(e).__name__})"}
+    if not (table := soup.find("table", id="table_v2")):
         return {"status": "error", "resultado": "N/A (Tabla H2H Col3 no encontrada)"}
-
     for row in table.find_all("tr", id=re.compile(r"tr2_\d+")):
         links = row.find_all("a", onclick=True)
         if len(links) < 2: continue
@@ -922,12 +870,31 @@ def obtener_datos_completos_partido(match_id: str):
     if not match_id or not match_id.isdigit():
         return {"error": "ID de partido inválido."}
 
+    # --- Inicialización de Selenium ---
+    options = ChromeOptions()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0.0.0 Safari/537.36")
+    options.add_argument('--blink-settings=imagesEnabled=false')
+    driver = webdriver.Chrome(options=options)
+    
+    main_page_url = f"{BASE_URL_OF}/match/h2h-{match_id}"
     datos = {"match_id": match_id}
 
     try:
-        soup_completo = _load_main_match_soup(match_id)
-        if soup_completo is None:
-            return {"error": "No se pudo cargar la página principal del partido."}
+        # --- Carga y Parseo de la Página Principal ---
+        driver.get(main_page_url)
+        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "table_v1")))
+        for select_id in ["hSelect_1", "hSelect_2", "hSelect_3"]:
+            try:
+                Select(WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.ID, select_id)))).select_by_value("8")
+                # Usamos una espera explícita más eficiente en lugar de time.sleep
+                WebDriverWait(driver, 1).until(EC.text_to_be_present_in_element((By.ID, select_id), "8"))
+            except TimeoutException:
+                continue
+        soup_completo = BeautifulSoup(driver.page_source, "lxml")
         datos['final_score'] = extract_final_score_of(soup_completo)
 
         # --- Extracción de Datos Primarios ---
@@ -955,17 +922,11 @@ def obtener_datos_completos_partido(match_id: str):
             future_last_home = executor.submit(extract_last_match_in_league_of, soup_completo, "table_v1", home_name, league_id, True)
             future_last_away = executor.submit(extract_last_match_in_league_of, soup_completo, "table_v2", away_name, league_id, False)
             
-            # Tarea H2H Col3 (requiere nueva carga de página)
+            # Tarea H2H Col3 (requiere una nueva llamada de Selenium)
             key_id_a, rival_a_id, rival_a_name = get_rival_a_for_original_h2h_of(soup_completo, league_id)
             _, rival_b_id, rival_b_name = get_rival_b_for_original_h2h_of(soup_completo, league_id)
-            future_h2h_col3 = executor.submit(
-                get_h2h_details_for_original_logic_of,
-                key_id_a,
-                rival_a_id,
-                rival_b_id,
-                rival_a_name,
-                rival_b_name,
-            )
+            # Usar el driver principal ya creado en lugar de crear uno nuevo
+            future_h2h_col3 = executor.submit(get_h2h_details_for_original_logic_of, driver, key_id_a, rival_a_id, rival_b_id, rival_a_name, rival_b_name)
             
             # Obtener resultados
             datos["home_standings"] = future_home_standings.result()
@@ -1091,8 +1052,15 @@ def obtener_datos_completos_partido(match_id: str):
         return datos
 
     except Exception as e:
-        logger.exception("Error crítico en obtener_datos_completos_partido")
+        print(f"ERROR CRÍTICO en el scraper: {e}")
         return {"error": f"Error durante el scraping: {e}"}
+    finally:
+        # Asegurar que el driver se cierra correctamente incluso si ocurre un error
+        if 'driver' in locals():
+            try:
+                driver.quit()
+            except:
+                pass
 
 
 # EN modules/estudio_scraper.py
@@ -1109,9 +1077,25 @@ def obtener_datos_preview_rapido(match_id: str):
 
     url = f"{BASE_URL_OF}/match/h2h-{match_id}"
     try:
-        soup = _load_main_match_soup(match_id)
-        if soup is None:
-            return {"error": "No se pudo cargar la página del partido para la vista previa."}
+        # 1. Cargar con Selenium para replicar el método de extracción principal
+        options = ChromeOptions()
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0.0.0 Safari/537.36")
+        options.add_argument('--blink-settings=imagesEnabled=false')
+        driver = webdriver.Chrome(options=options)
+        driver.get(url)
+        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "table_v1")))
+        # Ajustar selects a 8, igual que en el flujo completo
+        for select_id in ["hSelect_1", "hSelect_2", "hSelect_3"]:
+            try:
+                Select(WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.ID, select_id)))).select_by_value("8")
+                WebDriverWait(driver, 1).until(EC.text_to_be_present_in_element((By.ID, select_id), "8"))
+            except TimeoutException:
+                continue
+        soup = BeautifulSoup(driver.page_source, 'lxml')
 
         # 2. Extraer identificadores y nombres (igual que en el scraper completo)
         _, _, league_id, home_name, away_name, _ = get_team_league_info_from_script_of(soup)
@@ -1233,7 +1217,7 @@ def obtener_datos_preview_rapido(match_id: str):
             key_id_a, rival_a_id, rival_a_name = get_rival_a_for_original_h2h_of(soup, league_id)
             _, rival_b_id, rival_b_name = get_rival_b_for_original_h2h_of(soup, league_id)
             if key_id_a and rival_a_id and rival_b_id:
-                col3 = get_h2h_details_for_original_logic_of(key_id_a, rival_a_id, rival_b_id, rival_a_name, rival_b_name)
+                col3 = get_h2h_details_for_original_logic_of(driver, key_id_a, rival_a_id, rival_b_id, rival_a_name, rival_b_name)
                 if col3 and col3.get('status') == 'found':
                     score_line = f"{col3.get('h2h_home_team_name')} {col3.get('goles_home')}:{col3.get('goles_away')} {col3.get('h2h_away_team_name')}"
                     col3_stats = get_match_progression_stats_data(str(col3.get('match_id')))
@@ -1388,8 +1372,14 @@ def obtener_datos_preview_rapido(match_id: str):
     except requests.Timeout:
         return {"error": "La fuente de datos (Nowgoal) tardó demasiado en responder."}
     except Exception as e:
-        logger.exception("Error en scraper preview para %s", match_id)
+        print(f"ERROR en scraper preview para {match_id}: {e}")
         return {"error": f"No se pudieron obtener los datos de la vista previa: {type(e).__name__}"}
+    finally:
+        try:
+            if 'driver' in locals():
+                driver.quit()
+        except Exception:
+            pass
 
 
 

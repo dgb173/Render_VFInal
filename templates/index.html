@@ -214,14 +214,21 @@
             previewContainer.innerHTML = '<div class="preview-loading">Buscando analisis detallado...</div>';
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 120000);
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
 
             fetch(`/api/analisis/${matchId}`, { signal: controller.signal })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        // Si la respuesta no es OK (ej. 404, 500), leemos el error del JSON
+                        return response.json().then(err => Promise.reject(err));
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     clearTimeout(timeoutId);
+                    // El `data.error` de aquí es por si la respuesta es 200 OK pero el scraper tuvo un problema interno
                     if (data.error) {
-                        previewContainer.innerHTML = `<div class="preview-loading">Error: ${data.error}</div>`;
+                        previewContainer.innerHTML = `<div class="preview-loading text-danger"><b>Error:</b> ${data.error}</div>`;
                         return;
                     }
                     previewContainer.setAttribute('data-loaded', 'true');
@@ -383,7 +390,7 @@
                 .catch(error => {
                     clearTimeout(timeoutId);
                     if (error.name === 'AbortError') {
-                        previewContainer.innerHTML = '<div class="preview-loading">Tiempo de espera agotado (120s).</div>';
+                        previewContainer.innerHTML = '<div class="preview-loading">Tiempo de espera agotado (60s).</div>';
                     } else {
                         console.error('Error:', error);
                         previewContainer.innerHTML = '<div class="preview-loading">Error al cargar el analisis.</div>';

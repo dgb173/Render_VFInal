@@ -1,292 +1,80 @@
-¡Hecho! Aquí tienes el **PROMPT DEFINITIVO PARA CODEX**, ultraespecífico. Pégalo tal cual, deja que Codex haga los cambios, sube el repo a GitHub y despliega en Render (plan gratis). Está pensado para tu stack actual (Flask + requests + Playwright, con módulos `analisis_*`, `estudio_scraper.py`, `utils.py`, `scraper_partidos.py`, etc.) y para que **no rompa tus firmas** ni tus rutas.
+Sí. De hecho hay varias formas útiles (y legales) de **combinar IA con tu stack de scraping** para ganar rapidez, resiliencia y menos mantenimiento cuando cambian los layouts.
+
+# 1) Extracción estructurada con LLM (del HTML a JSON “limpio”)
+
+* En lugar de depender solo de selectores frágiles, puedes pasar el **HTML bruto** a un LLM con un **JSON Schema** / Pydantic y pedirle que devuelva campos exactos (equipo\_local, AH, cuota, fecha, etc.). Herramientas/ejemplos: **LLM-Scraper** (genera datos estructurados con JSON Schema) y marcos como **LangExtract** para extracción verificable. ([GitHub][1])
+* Pros: se rompe menos cuando cambian clases/CSS; reduces hotfixes. Contras: coste/latencia de inferencia (se compensa cacheando y llamando solo cuando falla el parser clásico). Resumen y comparativas recientes de “AI scrapers” (Firecrawl, ScrapeGraphAI, etc.) lo confirman. ([Bright Data][2])
+
+# 2) “Agentes” que navegan por la web (Playwright + LLM)
+
+* Para páginas altamente dinámicas (odds en vivo, flujos con clicks, filtros), un **agente LLM** puede planificar pasos y operar **Playwright** (sin UI cuando sea posible), localizar botones/campos por semántica y completar tareas. Papers como **Agent-E** y **Steward** describen navegadores dirigidos por LLM; reseñas 2024-2025 recogen frameworks que integran LLM + Playwright/Selenium. ([arXiv][3])
+* Regla de oro para rendimiento: usa **request context** de Playwright para golpear **XHR/JSON** directamente y deja el “agent” como *fallback* solo cuando haga falta interacción real (así no te penaliza el render). ([Medium][4])
+
+# 3) “Crawlers/ETL” ya IA-nativos como servicio
+
+* **Firecrawl** te entrega contenido “LLM-ready” (Markdown/JSON), con crawling y anti-bot integrados; útil como **pre-proceso** cuando no quieres mantener el crawler bajo fuego. ([Firecrawl - The Web Data API for AI][5])
+* **ScrapeGraphAI** automatiza pipelines de scraping con LLM (menos mantenimiento ante cambios de layout). Comparativas 2025 lo sitúan entre las opciones punteras. ([ScrapeGraphAI][6])
+
+# 4) PDFs/tablas y docs “duros”
+
+* Si en el flujo te aparecen PDFs con cuotas, reglamentos, etc., **LlamaParse** y **Docling** son de lo más preciso/rápido hoy para convertir a tablas/JSON; hay benchmarks 2025 con métricas de exactitud y velocidad. ([LlamaIndex][7])
 
 ---
 
-# PROMPT PARA CODEX — “Render-Ready Refactor” (copiar/pegar)
+## Cómo lo conectaría con **tus ficheros** (`app.py`, `scraper_partidos*.py`)
 
-Quiero que conviertas **mi proyecto actual (Flask + scraping)** en una app **100% apta para Render (plan gratuito)** sin romper ninguna firma pública ya usada por mis módulos de análisis. Aplica EXACTAMENTE lo siguiente, archivo por archivo, y entrégame los archivos finales completos (no fragmentos), más un *diff* claro.
+### A) Mantén tu transporte “rápido” y añade IA solo como *fallback inteligente*
 
-## 0) Objetivo
+1. **Primera pasada (rápida):**
 
-* Servir Flask detrás de **gunicorn** escuchando en `0.0.0.0:$PORT`.
-* Scraping **requests → fallback Playwright (Chromium)** con los flags correctos de contenedor.
-* Mantener **todas las firmas** que ya usa mi app (especialmente las de utilidades AH y las que consumen `analisis_avanzado.py`, `analisis_reciente.py`, `analisis_rivales.py`, `estudio_scraper.py`).
-* Normalizar comparación de tiempos en **UTC** (Render usa UTC); solo convertir a `Europe/Madrid` al mostrar si procede.
-* Añadir **logging**, ruta **/healthz** y **/debug**.
-* Proveer `requirements.txt`, `render.yaml` (opcional) y README con **Build/Start Commands** para Render.
-* No añadir técnicas para evadir anti-bot; si la web bloquea datacenters, lo dejamos documentado.
+   * Sigue con **Playwright request context** o `requests/httpx` para traer HTML/XHR.
+   * Parsea con **BeautifulSoup/selectolax** como ya haces (tu `parse_main_page_matches`/`parse_match_data_from_html`).
+2. **Si falla el selector o el campo viene vacío:**
 
-## 1) Mantener estructura y firmas
+   * Llamas a un **módulo LLM de extracción** con JSON Schema (p. ej., usando LLM-Scraper o tu propio prompt + validación Pydantic) para **reconstruir los campos** desde el HTML completo. ([GitHub][1])
+3. **Cachea** (por ID de partido + timestamp de la página) para no pagar dos veces la inferencia del mismo contenido.
+4. **Telemetry**: loguea cuándo interviene la IA; si el ratio sube, es señal de que la web cambió.
 
-* **No cambies nombres ni parámetros** de las funciones ya usadas por `app.py` y los módulos `analisis_*`.
-* Si existen duplicados de utilidades de hándicap (`parse_ah_to_number_of`, `format_ah_as_decimal_string_of`, `check_handicap_cover`) en más de un archivo, **centralízalas en `utils.py`** y actualiza los imports en el resto. **Las firmas deben quedar idénticas**.
-* No elimines rutas; solo añade `/healthz` y `/debug`.
+### B) Auto-healing de selectores
 
-## 2) Archivos a crear/actualizar
+* Cuando el LLM consigue el valor, deja que **propose/valide** un **nuevo selector CSS/XPath** (con ejemplos) y **guárdalo**; la próxima ejecución vuelve al modo rápido sin LLM. (Patrón usado en agentes de navegación y herramientas tipo ScrapeGraphAI). ([ScrapeGraphAI][6])
 
-### 2.1 `requirements.txt` (crear o actualizar con estas líneas mínimas)
+### C) Para páginas con mucha interacción
 
-```
-flask
-gunicorn
-requests
-urllib3
-beautifulsoup4
-pytz
-playwright
-tenacity
-```
+* Añade un **modo agente**: si `parse_*` falla dos veces, activa un playbook del **agente LLM + Playwright** (abrir dropdown, aplicar filtro, esperar XHR y capturar el JSON). Limítalo a casos puntuales para no perder throughput. ([arXiv][3])
 
-> Si el proyecto usa `zoneinfo` (stdlib 3.9+), no hace falta backport. No añadas Selenium aquí.
+### D) PDFs en la cadena
+
+* Si en `obtener_datos_completos_partido` aparecen enlaces a PDFs (reglas/estatutos con mercados), manda esos PDFs por **LlamaParse/Docling** → JSON y procesa como si fuera otra fuente. Benchmarks y guías 2025 cubren pros/contras. ([Procycons][8])
 
 ---
 
-### 2.2 `app.py` (actualizar sin romper rutas existentes)
+## ¿Cuándo compensa usar IA en scraping?
 
-1. **Logging y configuración** al inicio:
-
-```python
-import os, logging
-from flask import Flask, jsonify, render_template
-
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(level=getattr(logging, LOG_LEVEL, logging.INFO),
-                    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
-logger = logging.getLogger("app")
-```
-
-2. **Asegúrate** de que exista `app = Flask(__name__)` accesible por `gunicorn app:app`.
-3. **Añade endpoints de salud y debug**, sin tocar los existentes:
-
-```python
-@app.get("/healthz")
-def healthz():
-    return jsonify({"status": "ok"}), 200
-
-@app.get("/debug")
-def debug():
-    from scraper_partidos import fetch_with_requests, html_has_rows, fetch_html_via_playwright_sync, TARGET_URL
-    try:
-        html = fetch_with_requests(TARGET_URL, timeout=20)
-        info = {
-            "method": "requests",
-            "status": "ok",
-            "len": len(html or ""),
-            "has_rows": bool(html and html_has_rows(html))
-        }
-        if not info["has_rows"]:
-            html2 = fetch_html_via_playwright_sync(TARGET_URL, timeout_ms=20000)
-            info.update({
-                "method": "playwright",
-                "len": len(html2 or ""),
-                "has_rows": bool(html2 and html_has_rows(html2))
-            })
-        return jsonify(info), 200
-    except Exception as e:
-        logger.exception("debug error")
-        return jsonify({"error": str(e)}), 500
-```
-
-4. **Quita cualquier `app.run(...)` en producción.** Deja:
-
-```python
-if __name__ == "__main__":
-    # Solo para desarrollo local:
-    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "8080")), debug=True)
-```
-
-> Gunicorn en Render será el responsable de arrancar.
-
-5. **Zonas horarias**: si formateas la hora en la tabla, **no sumes offsets fijos (+1/+2)**. Internamente compara en UTC; al presentar, si necesitas, convierte con `Europe/Madrid` SOLO en las plantillas o en la serialización de respuesta. No rompas firmas.
+* **Estructuras muy cambiantes** o **múltiples dominios** con costes de mantenimiento altos → sí. (Resumen/comparativas 2025). ([Bright Data][2])
+* **Necesitas semántica** (e.g., “quién es favorito real según contexto del texto”) más que solo texto literal → sí.
+* **Bajo coste/alta latencia tolerable** (p. ej., pre-batch nocturno) → sí. En **tiempo real/segundos**, úsala como **fallback**, no como camino principal.
 
 ---
 
-### 2.3 `scraper_partidos.py` (hacer robusto para Render)
+## Nota rápida sobre límites éticos/legales
 
-* Debe exponer como mínimo:
-
-```python
-# URL objetivo
-TARGET_URL = "https://live21.nowgoal25.com/..."  # deja la que uses ahora
-
-# 1) Requests con UA y timeout
-import requests
-
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-
-def fetch_with_requests(url: str, timeout: int = 20) -> str | None:
-    try:
-        r = requests.get(url, headers={"User-Agent": UA}, timeout=timeout)
-        if r.status_code == 200:
-            return r.text
-        return None
-    except Exception:
-        return None
-
-# 2) Detección de filas/odds en el HTML
-def html_has_rows(html: str) -> bool:
-    if not html:
-        return False
-    # Ajusta a tu selector real de filas con odds/handicap:
-    return ("tr1_" in html) or ('odds="' in html)  # mínimo; afina si ya tienes selectores
-
-# 3) Playwright con flags de contenedor
-import asyncio
-from playwright.async_api import async_playwright
-
-PLAYWRIGHT_ARGS = ["--no-sandbox", "--disable-dev-shm-usage"]
-
-async def fetch_with_playwright(url: str, timeout_ms: int = 20000) -> str | None:
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True, args=PLAYWRIGHT_ARGS)
-        context = await browser.new_context(user_agent=UA)
-        page = await context.new_page()
-        try:
-            await page.goto(url, wait_until="networkidle", timeout=timeout_ms)
-            # Espera al selector clave (ajústalo a tu tabla real):
-            try:
-                await page.wait_for_selector("tr[id^='tr1_']", state="attached", timeout=timeout_ms)
-            except Exception:
-                pass
-            html = await page.content()
-            return html
-        finally:
-            await context.close()
-            await browser.close()
-
-def fetch_html_via_playwright_sync(url: str, timeout_ms: int = 20000) -> str | None:
-    try:
-        return asyncio.run(fetch_with_playwright(url, timeout_ms=timeout_ms))
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        try:
-            asyncio.set_event_loop(loop)
-            return loop.run_until_complete(fetch_with_playwright(url, timeout_ms=timeout_ms))
-        finally:
-            loop.close()
-```
-
-* **Pipeline recomendado** donde ya parseas y normalizas tiempos a UTC (mantén tus funciones actuales de parseo; no cambies firmas). Si hay filtros “próximos”, que comparen en UTC.
+* La IA **no es** para “evadir” barreras tipo CAPTCHA/anti-bot de forma abusiva; manténte en lo permitido por ToS y normativa local. Usa los agentes/servicios con moderación y respeto a *rate limits*. Las reviews de herramientas mencionan “anti-bot handling”, pero eso no sustituye tu cumplimiento. ([Bright Data][2])
 
 ---
 
-### 2.4 `utils.py` (centralizar utilidades AH)
+Si te va bien, en tu repo puedo esbozar:
 
-* Deja **aquí** las funciones de hándicap que usan los análisis y el servidor:
+* Un **módulo `ai_extractor.py`** con JSON Schema para tus campos (equipo\_local, equipo\_visitante, AH, OU, hora, liga, etc.) y **estrategia de fallback**.
+* Un **`agent_mode.py`** que solo se activa si fallan dos pasadas, usando Playwright request-context + plan del LLM para dar con el XHR correcto (sin render completo).
 
-  * `parse_ah_to_number_of`
-  * `format_ah_as_decimal_string_of`
-  * `check_handicap_cover`
-* Si `estudio_scraper.py` o cualquier otro archivo las tiene duplicadas, **elimínalas allí** y **haz**:
+¿Lo monto así con tus rutas (`/api/preview`, `/api/analisis`) y dejo flags `mode=fast|ai|agent`?
 
-  ```python
-  from utils import parse_ah_to_number_of, format_ah_as_decimal_string_of, check_handicap_cover
-  ```
-* **No cambies** sus nombres ni parámetros.
-
----
-
-### 2.5 `estudio_scraper.py`, `analisis_avanzado.py`, `analisis_reciente.py`, `analisis_rivales.py`, `funciones_auxiliares.py`
-
-* **No cambies firmas.**
-* Solo actualiza **imports** para que tomen las utilidades desde `utils.py` (si procede).
-* No introduzcas Selenium en el camino del servidor web; si alguna parte CLI lo usa, mantenla, pero que **las rutas Flask** dependan de requests/Playwright.
-
----
-
-### 2.6 `templates/index.html`
-
-* Asegúrate de que existe y no rompe. Si no existe, crea una mínima que:
-
-  * Haga fetch a `/api/matches` (o tu endpoint actual).
-  * Pinte columnas: **Hora**, **Partido**, **Hándicap**, **Línea de Goles**, **Análisis Avanzado**, **Vista Previa Rápida** (según tus claves actuales).
-* No cambies nombres de campos que la app ya espera.
-
----
-
-### 2.7 `render.yaml` (opcional pero recomendado)
-
-```yaml
-services:
-  - type: web
-    name: mi-flask-scraper
-    env: python
-    plan: free
-    buildCommand: |
-      pip install -r requirements.txt && python -m playwright install --with-deps chromium
-    startCommand: |
-      gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120
-    envVars:
-      - key: LOG_LEVEL
-        value: INFO
-      - key: TZ
-        value: UTC
-      - key: RENDER
-        value: "1"
-    healthCheckPath: /healthz
-```
-
----
-
-### 2.8 `README.md` (añadir sección “Deploy en Render”)
-
-Incluye exactamente:
-
-**Build Command**
-
-```
-pip install -r requirements.txt && python -m playwright install --with-deps chromium
-```
-
-**Start Command**
-
-```
-gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120
-```
-
-**Health check path:** `/healthz`
-**Env vars sugeridas:** `LOG_LEVEL=INFO`, `TZ=UTC`, `RENDER=1`
-
-**Notas:**
-
-* `--with-deps` instala paquetes de sistema para Chromium.
-* Playwright se lanza con `--no-sandbox --disable-dev-shm-usage`.
-* Si el origen bloquea IPs de datacenter, incluso con Playwright puede no aparecer la tabla. Es comportamiento del sitio (sin workarounds de evasión).
-
----
-
-## 3) Aceptación / pruebas (obligatorio)
-
-1. **Local**:
-
-   ```bash
-   pip install -r requirements.txt
-   python -m playwright install chromium
-   gunicorn app:app --bind 127.0.0.1:8080 --workers 1 --threads 8 --timeout 120
-   curl http://127.0.0.1:8080/healthz
-   curl http://127.0.0.1:8080/debug
-   ```
-
-   * `/debug` debe mostrar `has_rows: true` con `method: "requests"` o, si falla, con `"playwright"`.
-2. **Render**:
-
-   * Logs deben mostrar que arranca gunicorn sin `app.run()`.
-   * `/healthz` responde 200.
-   * `/debug` devuelve `has_rows: true` (o, si el sitio bloquea, al menos `len` significativo con método `"playwright"`).
-   * La **tabla** carga con Hora/Partido/Hándicap/Línea de Goles como en local.
-3. **Regresión**:
-
-   * Los módulos `analisis_avanzado.py`, `analisis_reciente.py`, `analisis_rivales.py`, `estudio_scraper.py` **siguen pudiendo importar y usar** `parse_ah_to_number_of`, `format_ah_as_decimal_string_of`, `check_handicap_cover` desde `utils.py` **con las mismas firmas**.
-   * Ninguna ruta existente cambia su URL ni su firma.
-
-**Devuélveme**:
-
-* Archivos finales completos.
-* *Diff* claro por archivo (qué añadiste/quitaste).
-* Confirmación de que los tests de aceptación anteriores pasan localmente.
-
-> No incluyas técnicas para evadir bloqueos del sitio. Si el origen bloquea la IP de datacenter, documenta el comportamiento y sugiere API oficial como alternativa.
-
----
-
-**Fin del prompt.**
+[1]: https://github.com/mishushakov/llm-scraper?utm_source=chatgpt.com "mishushakov/llm-scraper: Turn any webpage into ..."
+[2]: https://brightdata.com/blog/ai/best-ai-scraping-tools?utm_source=chatgpt.com "Best AI Web Scraping Tools of 2025: Complete Comparison"
+[3]: https://arxiv.org/html/2407.13032v1?utm_source=chatgpt.com "Agent-E: From Autonomous Web Navigation to ..."
+[4]: https://medium.com/%40learning_37638/state-of-the-art-autonomous-web-agents-2024-2025-3d9d93a5dde2?utm_source=chatgpt.com "State-of-the-Art Autonomous Web Agents (2024–2025)"
+[5]: https://www.firecrawl.dev/?utm_source=chatgpt.com "Firecrawl - The Web Data API for AI"
+[6]: https://scrapegraphai.com/?utm_source=chatgpt.com "ScrapeGraphAI"
+[7]: https://www.llamaindex.ai/blog/pdf-parsing-llamaparse?utm_source=chatgpt.com "Parsing PDFs with LlamaParse: a how-to guide"
+[8]: https://procycons.com/en/blogs/pdf-data-extraction-benchmark/?utm_source=chatgpt.com "PDF Data Extraction Benchmark 2025: Comparing Docling ..."
